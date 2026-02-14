@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environments
+.venv/
+venv/
+
+# PyCharm / IDE
+.idea/
+
+# Database files
+*.db
+
+# OS
+Thumbs.db
+.DS_Store
