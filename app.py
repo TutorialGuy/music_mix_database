@@ -1,9 +1,10 @@
 from flask import Flask, request, redirect
 from database import (
     init_db, add_mix, get_all_mixes, get_mix_by_id,
-    add_track_to_mix,      # ← ось це додати
+    add_track_to_mix,
     get_tracks_for_mix,
-    get_mix_track_row, update_mix_track
+    get_mix_track_row, update_mix_track,
+    delete_mix_track
 )
 
 app = Flask(__name__)
@@ -138,6 +139,7 @@ def mix_detail(mix_id):
                 label += f' (<a href="{soundcloud}" target="_blank">SoundCloud</a>)'
 
             label += f' <a href="/edit-track/{mix_track_id}">[редагувати]</a>'
+            label += f' <a href="/delete-track/{mix_track_id}" style="color:red;">[видалити]</a>'
 
             html += f"<li>{label}</li>"
 
@@ -200,6 +202,19 @@ def edit_track(mix_track_id):
 
     html += f'<p><a href="/mix/{mix_id}">Назад до міксу</a> | <a href="/">На головну</a></p>'
     return html
+
+@app.route("/delete-track/<int:mix_track_id>")
+def delete_track(mix_track_id):
+    row = get_mix_track_row(mix_track_id)
+    if not row:
+        return redirect("/")
+
+    mix_track_id, mix_id, artist, title, soundcloud, time_value, pos = row
+
+    delete_mix_track(mix_track_id)
+
+    return redirect(f"/mix/{mix_id}")
+
 
 if __name__ == "__main__":
     init_db()

@@ -178,5 +178,36 @@ def update_mix_track(mix_track_id, artist, title, soundcloud, time_value):
 
     return True
 
+def delete_mix_track(mix_track_id):
+    with get_connection() as conn:
+        cur = conn.cursor()
+
+        # дізнаємось mix_id та pos видаленого треку
+        cur.execute("""
+        SELECT mix_id, pos FROM mix_tracks WHERE id=?
+        """, (mix_track_id,))
+        row = cur.fetchone()
+
+        if not row:
+            return False
+
+        mix_id, deleted_pos = row
+
+        # видаляємо сам трек
+        cur.execute("""
+        DELETE FROM mix_tracks WHERE id=?
+        """, (mix_track_id,))
+
+        # зсуваємо всі треки нижче на -1
+        cur.execute("""
+        UPDATE mix_tracks
+        SET pos = pos - 1
+        WHERE mix_id=? AND pos > ?
+        """, (mix_id, deleted_pos))
+
+        conn.commit()
+
+    return True
+
 
 
