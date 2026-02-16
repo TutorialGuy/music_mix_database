@@ -15,9 +15,15 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
             youtube TEXT,
-            soundcloud TEXT
+            soundcloud TEXT,
+            cover TEXT
         )
         """)
+
+        try:
+            cursor.execute("ALTER TABLE mixes ADD COLUMN cover TEXT")
+        except sqlite3.OperationalError:
+            pass
 
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS tracks (
@@ -50,14 +56,15 @@ def init_db():
         conn.commit()
 
 
-def add_mix(title, youtube, soundcloud):
+def add_mix(title, youtube, soundcloud, cover):
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO mixes (title, youtube, soundcloud) VALUES (?, ?, ?)",
-            (title, youtube, soundcloud)
+            "INSERT INTO mixes (title, youtube, soundcloud, cover) VALUES (?, ?, ?, ?)",
+            (title, youtube, soundcloud, cover)
         )
         conn.commit()
+
 
 
 def get_all_mixes():

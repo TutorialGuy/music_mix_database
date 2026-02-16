@@ -18,3 +18,7 @@ Thumbs.db
 
 #TXT
 *.txt
+
+data/
+
+data/covers/

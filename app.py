@@ -6,8 +6,24 @@ from database import (
     get_mix_track_row, update_mix_track,
     delete_mix_track
 )
+import os
+from werkzeug.utils import secure_filename
+from werkzeug.exceptions import RequestEntityTooLarge
+from PIL import Image
+from flask import redirect
+
 
 app = Flask(__name__)
+
+# Має бути перевірка на 3 MB, але треба пропустити хоч щось, щоб зберегти поля
+app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024
+
+# Папка для збереження обкладинок (краще синхронізувати через хмару разом з БД)
+COVERS_FOLDER = os.path.join(app.root_path, "data", "covers")
+os.makedirs(COVERS_FOLDER, exist_ok=True)
+
+ALLOWED_EXT = {"jpg", "jpeg", "png", "bmp", "webp", "gif"}
+
 
 @app.route("/")
 def home():
@@ -20,53 +36,82 @@ def home():
         <li><a href="/search">Пошук треку</a></li>
     </ul>
     """
+@app.route("/mixes")
+def mixes_page():
+    mixes = get_all_mixes()
+    html = "<h2>Список міксів</h2>"
+    html += '<p><a href="/add-mix">Додати мікс</a> | <a href="/">На головну</a></p>'
+
+    if not mixes:
+        html += "<p>Поки що немає міксів.</p>"
+    else:
+        html += "<ul>"
+        for mix_id, title, youtube, soundcloud in mixes:
+            html += f'<li><a href="/mix/{mix_id}">{title}</a></li>'
+        html += "</ul>"
+
+    return html
 
 @app.route("/add-mix", methods=["GET", "POST"])
 def add_mix_page():
+    error_msg = ""
+    if request.method == "GET" and request.args.get("err") == "too_large":
+        error_msg = "❌ Файл завеликий (максимум 3MB)."
+    title_value = ""
+    youtube_value = ""
+    soundcloud_value = ""
+
     if request.method == "POST":
-        title = request.form.get("title", "").strip()
-        youtube = request.form.get("youtube", "").strip()
-        soundcloud = request.form.get("soundcloud", "").strip()
+        title_value = request.form.get("title", "")
+        youtube_value = request.form.get("youtube", "")
+        soundcloud_value = request.form.get("soundcloud", "")
 
-        if title:
-            add_mix(title, youtube, soundcloud)
+        cover_path = None
+        file = request.files.get("cover")
 
-        return redirect("/mixes")
+        # 1) Спочатку перевіряємо назву
+        if not title_value.strip():
+            error_msg = "❌ Назва міксу — обов'язкова."
 
-    return """
-    <h2>Додати мікс</h2>
-    <form method="post">
-        <p>Назва міксу:<br><input name="title" style="width:400px"></p>
-        <p>YouTube посилання:<br><input name="youtube" style="width:400px"></p>
-        <p>SoundCloud посилання:<br><input name="soundcloud" style="width:400px"></p>
+        # 2) Потім обробляємо картинку ТІЛЬКИ якщо назва ок і файл реально обраний
+        # ✅ перевірка об’єму файлу (3MB) вручну, щоб не було 413 і не скидало форму
+        file.stream.seek(0, os.SEEK_END)
+        size_bytes = file.stream.tell()
+        file.stream.seek(0)
+
+        if size_bytes > 3 * 1024 * 1024:
+            error_msg = "❌ Файл завеликий (максимум 3MB)."
+
+        # 3) Додаємо мікс тільки якщо немає жодних помилок
+        if not error_msg:
+            add_mix(title_value.strip(), youtube_value.strip(), soundcloud_value.strip(), cover_path)
+            return redirect("/mixes")
+
+    html = "<h2>Додати мікс</h2>"
+
+    if error_msg:
+        html += f'<p style="color:red;"><b>{error_msg}</b></p>'
+
+    html += f"""
+    <form method="post" enctype="multipart/form-data">
+        <p>Обкладинка (не обов'язково):<br>
+            <input type="file" name="cover" accept="image/*"></p>
+
+        <p>Назва міксу (*):<br>
+           <input name="title" value="{title_value}" style="width:400px"></p>
+
+        <p>YouTube (посилання):<br>
+           <input name="youtube" value="{youtube_value}" style="width:400px"></p>
+
+        <p>SoundCloud (посилання):<br>
+           <input name="soundcloud" value="{soundcloud_value}" style="width:400px"></p>
+
         <button type="submit">Зберегти</button>
     </form>
-    <p><a href="/">Назад</a></p>
+    <p><a href="/">На головну</a></p>
     """
-
-@app.route("/search")
-def search():
-    return "<h2>Тут буде пошук треку</h2><p><a href='/'>Назад</a></p>"
-
-@app.route("/mixes")
-def mixes():
-    mixes_list = get_all_mixes()
-
-    html = "<h2>Список міксів</h2>"
-    html += '<p><a href="/add-mix">➕ Додати новий мікс</a> | <a href="/">На головну</a></p>'
-    html += "<ol>"
-
-    for mix_id, title, youtube, soundcloud in mixes_list:
-        html += "<li>"
-        html += f'<b><a href="/mix/{mix_id}">{title}</a></b><br>'
-        if youtube:
-            html += f'YouTube: <a href="{youtube}" target="_blank">{youtube}</a><br>'
-        if soundcloud:
-            html += f'SoundCloud: <a href="{soundcloud}" target="_blank">{soundcloud}</a><br>'
-        html += "</li><br>"
-
-    html += "</ol>"
     return html
+
 
 @app.route("/mix/<int:mix_id>", methods=["GET", "POST"])
 def mix_detail(mix_id):
