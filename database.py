@@ -1,4 +1,5 @@
 import sqlite3
+import os
 
 DB_NAME = "music.db"
 
@@ -69,14 +70,14 @@ def add_mix(title, youtube, soundcloud, cover):
 
 def get_all_mixes():
     with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, title, youtube, soundcloud FROM mixes ORDER BY id DESC")
-        return cursor.fetchall()
+        cur = conn.cursor()
+        cur.execute("SELECT id, title, youtube, soundcloud, cover FROM mixes ORDER BY id DESC")
+        return cur.fetchall()
 
 def get_mix_by_id(mix_id):
     with get_connection() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT id, title, youtube, soundcloud FROM mixes WHERE id=?", (mix_id,))
+        cur.execute("SELECT id, title, youtube, soundcloud, cover FROM mixes WHERE id=?", (mix_id,))
         return cur.fetchone()
 
 
@@ -185,6 +186,19 @@ def update_mix_track(mix_track_id, artist, title, soundcloud, time_value):
 
     return True
 
+def get_mix_cover(mix_id):
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT cover FROM mixes WHERE id=?", (mix_id,))
+        row = cur.fetchone()
+        return row[0] if row and row[0] else None
+
+def update_mix_cover(mix_id, cover_path):
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("UPDATE mixes SET cover=? WHERE id=?", (cover_path, mix_id))
+        conn.commit()
+
 def delete_mix_track(mix_track_id):
     with get_connection() as conn:
         cur = conn.cursor()
@@ -213,6 +227,36 @@ def delete_mix_track(mix_track_id):
         """, (mix_id, deleted_pos))
 
         conn.commit()
+
+    return True
+
+def delete_mix(mix_id):
+    with get_connection() as conn:
+        cur = conn.cursor()
+
+        # 1️⃣ Дізнаємось шлях до обкладинки
+        cur.execute("SELECT cover FROM mixes WHERE id=?", (mix_id,))
+        row = cur.fetchone()
+
+        cover_path = row[0] if row and row[0] else None
+
+        # 2️⃣ Видаляємо треки
+        cur.execute("DELETE FROM mix_tracks WHERE mix_id=?", (mix_id,))
+
+        # 3️⃣ Видаляємо сам мікс
+        cur.execute("DELETE FROM mixes WHERE id=?", (mix_id,))
+
+        conn.commit()
+
+    # 4️⃣ Видаляємо файл обкладинки (після закриття з'єднання)
+    if cover_path:
+        full_path = os.path.join(os.getcwd(), cover_path)
+
+        if os.path.exists(full_path):
+            try:
+                os.remove(full_path)
+            except Exception:
+                pass  # якщо не вдалось — просто не падаємо
 
     return True
 
