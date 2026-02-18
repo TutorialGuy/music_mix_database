@@ -199,6 +199,21 @@ def update_mix_cover(mix_id, cover_path):
         cur.execute("UPDATE mixes SET cover=? WHERE id=?", (cover_path, mix_id))
         conn.commit()
 
+def search_tracks(query):
+    q = f"%{query.strip()}%"
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT 
+                m.id, m.title, m.cover,
+                mt.id, mt.artist, mt.title, mt.soundcloud, mt.time
+            FROM mix_tracks mt
+            JOIN mixes m ON m.id = mt.mix_id
+            WHERE mt.title LIKE ? OR mt.artist LIKE ?
+            ORDER BY m.id DESC, mt.id ASC
+        """, (q, q))
+        return cur.fetchall()
+
 def delete_mix_track(mix_track_id):
     with get_connection() as conn:
         cur = conn.cursor()
