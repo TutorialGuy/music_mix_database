@@ -316,13 +316,16 @@ def mix_detail(mix_id):
     html += """
     <h3>Імпорт трекліста (з тексту)</h3>
     <form method="post" action="/mix/{mix_id}/import-tracks">
-        <p>Встав сюди трекліст (кожен трек з нового рядка). Підтримуються формати:
-        <br>• 00:04:32 Artist - Track
-        <br>• 04:32 Artist - Track
-        <br>• Artist - Track
-        <br>• Track
-        </p>
-        <textarea name="bulk" style="width:700px;height:220px;"></textarea><br>
+        <textarea name="bulk"
+          placeholder="Встав сюди трекліст (кожен трек з нового рядка)
+
+Підтримуються формати:
+• 00:04:32 Artist - Track
+• 04:32 Artist - Track
+• Artist - Track
+• Track"
+          style="width:700px;height:220px;padding:10px;font-family:monospace;"></textarea>
+
         <button type="submit">Імпортувати</button>
     </form>
     """.replace("{mix_id}", str(mix_id))
