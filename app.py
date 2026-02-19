@@ -271,42 +271,82 @@ def mix_detail(mix_id):
     # важливо: тут soundcloud — це soundcloud МІКСУ, не треку
     mix_id, mix_title, youtube, sc_mix, cover = mix
 
-    html = f"<h2>Мікс: {mix_title}</h2>"
+    html = f'<div id="top"></div><h2>Мікс: {mix_title}</h2>'
+    html += """
+    <p style="margin-top:6px;">
+      <a href="/" style="margin-right:12px;">🏠 На головну</a>
+      <a href="/mixes">⬅️ Назад до списку міксів</a>
+    </p>
+    """
 
-    # ---- прев'ю обкладинки ----
+    # --- Двоколонковий блок: зліва трекліст, справа обкладинка ---
+    html += """
+    <div style="display:flex; gap:20px; align-items:flex-start; margin-top:10px;">
+      <div style="flex: 2; min-width: 420px;">
+    """
+
+    # ---- трекліст ----
+    html += "<h3>Трекліст</h3>"
+    if not tracks:
+        html += "<p>Поки що немає треків.</p>"
+    else:
+        html += "<ol>"
+        for mix_track_id, artist, title, sc_track, time_value in tracks:
+            label = title if not artist else f"{artist} — {title}"
+            if time_value:
+                label = f"[{time_value}] {label}"
+            if sc_track:
+                label += f' (<a href="{sc_track}" target="_blank">SoundCloud</a>)'
+            label += f' <a href="/edit-track/{mix_track_id}">[редагувати]</a>'
+            label += f' <a href="/delete-track/{mix_track_id}" style="color:red;">[видалити]</a>'
+            html += f"<li>{label}</li>"
+        html += "</ol>"
+
+    html += """
+      </div>
+      <div style="flex: 1; min-width: 260px;">
+    """
+
+    # прев'ю обкладинки (праворуч)
     if cover:
         cover_url = "/" + cover.replace("\\", "/")
         html += f"""
-        <div style="margin:10px 0;">
+        <div style="margin-bottom:10px;">
             <img src="{cover_url}" alt="cover"
-                 style="width:240px;height:auto;border:1px solid #ccc;border-radius:8px;object-fit:contain;">
+                 style="width:260px; height:260px; object-fit:cover; border:1px solid #ccc; border-radius:10px;">
         </div>
         """
 
-    # ---- форма обкладинки ----
-    html += "<h3>Обкладинка</h3>"
+    html += "<h3 style='margin-top:0;'>Обкладинка</h3>"
+
     if cover_error_msg:
         html += f'<p style="color:red;"><b>{cover_error_msg}</b></p>'
 
     html += f"""
     <form method="post" action="/mix/{mix_id}/update-cover" enctype="multipart/form-data">
-        <p>Завантажити нову обкладинку:<br>
-           <input type="file" name="cover" accept="image/*">
-           <small style="display:block;color:gray;margin-top:4px;">
-               Формати: JPG/JPEG, PNG, BMP, WEBP, GIF • Макс: 3MB • До 3000×3000
-           </small>
-        </p>
-        <button type="submit">Оновити обкладинку</button>
+        <input type="file" name="cover" accept="image/*"><br>
+        <small style="display:block;color:gray;margin-top:4px;">
+            Формати: JPG/JPEG, PNG, BMP, WEBP, GIF<br>
+            Макс: 3MB • До 3000×3000
+        </small>
+        <button type="submit" style="margin-top:8px;">Оновити</button>
     </form>
     """
 
     # ---- посилання міксу ----
+    html += "<hr style='margin:15px 0;'>"
+    html += "<h3 style='margin-top:0;'>Посилання</h3>"
     html += "<p>"
     if youtube:
         html += f'YouTube: <a href="{youtube}" target="_blank">{youtube}</a><br>'
     if sc_mix:
         html += f'SoundCloud: <a href="{sc_mix}" target="_blank">{sc_mix}</a><br>'
     html += "</p>"
+
+    html += """
+      </div>
+    </div>
+    """
 
     # ---- помилка додавання треку ----
     if track_error_msg:
@@ -319,11 +359,11 @@ def mix_detail(mix_id):
         <textarea name="bulk"
           placeholder="Встав сюди трекліст (кожен трек з нового рядка)
 
-Підтримуються формати:
-• 00:04:32 Artist - Track
-• 04:32 Artist - Track
-• Artist - Track
-• Track"
+    Підтримуються формати:
+    • 00:04:32 Artist - Track
+    • 04:32 Artist - Track
+    • Artist - Track
+    • Track"
           style="width:700px;height:220px;padding:10px;font-family:monospace;"></textarea>
 
         <button type="submit">Імпортувати</button>
@@ -349,24 +389,33 @@ def mix_detail(mix_id):
     </form>
     """
 
-    # ---- трекліст ----
-    html += "<h3>Трекліст</h3>"
-    if not tracks:
-        html += "<p>Поки що немає треків.</p>"
-    else:
-        html += "<ol>"
-        for mix_track_id, artist, title, sc_track, time_value in tracks:
-            label = title if not artist else f"{artist} — {title}"
-            if time_value:
-                label = f"[{time_value}] {label}"
-            if sc_track:
-                label += f' (<a href="{sc_track}" target="_blank">SoundCloud</a>)'
-            label += f' <a href="/edit-track/{mix_track_id}">[редагувати]</a>'
-            label += f' <a href="/delete-track/{mix_track_id}" style="color:red;">[видалити]</a>'
-            html += f"<li>{label}</li>"
-        html += "</ol>"
+    html += """
+    <p style="margin-top:20px;">
+      <a href="/" style="margin-right:12px;">🏠 На головну</a>
+      <a href="/mixes">⬅️ Назад до списку міксів</a>
+    </p>
+    """
+    html += """
+    <a href="#top"
+       title="Вгору"
+       style="
+         position:fixed;
+         right:18px;
+         bottom:18px;
+         background:#f2f2f2;
+         border:1px solid #ccc;
+         border-radius:12px;
+         padding:10px 12px;
+         text-decoration:none;
+         color:#000;
+         box-shadow:0 2px 6px rgba(0,0,0,0.15);
+       ">⬆️</a>
 
-    html += "<p><a href='/mixes'>Назад до списку міксів</a></p>"
+    <style>
+      html { scroll-behavior: smooth; }
+    </style>
+    """
+    
     return html
 
 def _normalize_time(t: str) -> str:
