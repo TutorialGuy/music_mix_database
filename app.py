@@ -135,35 +135,13 @@ def add_mix_page():
                 add_mix(title_value.strip(), youtube_value.strip(), soundcloud_value.strip(), cover_path)
                 return redirect("/mixes")
 
-    html = "<h2>Додати мікс</h2>"
-
-    if error_msg:
-        html += f'<p style="color:red;"><b>{error_msg}</b></p>'
-
-    html += f"""
-    <form method="post" enctype="multipart/form-data">
-        <p>Обкладинка:<br>
-    <input type="file" name="cover" accept="image/*"><br>
-    <small style="display:block;color:gray;margin-top:4px;">
-    Формати: JPG/JPEG, PNG, BMP, WEBP, GIF • Макс: 3MB • До 3000×3000px 
-</small>
-
-</p>
-
-        <p>Назва міксу (*):<br>
-           <input name="title" value="{title_value}" style="width:400px"></p>
-
-        <p>YouTube:<br>
-           <input name="youtube" value="{youtube_value}" style="width:400px"></p>
-
-        <p>SoundCloud:<br>
-           <input name="soundcloud" value="{soundcloud_value}" style="width:400px"></p>
-
-        <button type="submit">Зберегти</button>
-    </form>
-    <p><a href="/">На головну</a></p>
-    """
-    return html
+    return render_template(
+        "add_mix.html",
+        error_msg=error_msg,
+        title_value=title_value,
+        youtube_value=youtube_value,
+        soundcloud_value=soundcloud_value
+    )
 
 
 @app.route("/mix/<int:mix_id>", methods=["GET", "POST"])
