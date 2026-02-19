@@ -13,10 +13,10 @@
 </p>
 
 <!-- Двоколонковий блок -->
-<div style="display:flex; gap:20px; align-items:flex-start; margin-top:10px;">
+<div class="mix-container">
 
     <!-- Ліва колонка: трекліст -->
-    <div style="flex: 2; min-width: 420px;">
+    <div class="mix-left">
         <h3>Трекліст</h3>
 
         {% if not tracks %}
@@ -42,10 +42,18 @@
                 {% endfor %}
             </ol>
         {% endif %}
+
+        {% if tags %}
+            <p>
+                {% for tag in tags.split(",") %}
+                    <span class="tag">{{ tag.strip() }}</span>
+                {% endfor %}
+            </p>
+        {% endif %}
     </div>
 
     <!-- Права колонка: обкладинка + посилання -->
-    <div style="flex: 1; min-width: 260px;">
+    <div class="mix-right">
 
         {% if cover %}
             <div style="margin-bottom:10px;">

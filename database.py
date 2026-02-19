@@ -55,29 +55,60 @@ def init_db():
         except sqlite3.OperationalError:
             pass
         conn.commit()
-
-
-def add_mix(title, youtube, soundcloud, cover):
     with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO mixes (title, youtube, soundcloud, cover) VALUES (?, ?, ?, ?)",
-            (title, youtube, soundcloud, cover)
-        )
+        v = get_schema_version(conn)
+
+        # приклад майбутніх кроків:
+        # if v < 2:
+        #     cur = conn.cursor()
+        #     cur.execute("ALTER TABLE mixes ADD COLUMN tags TEXT")
+        #     set_schema_version(conn, 2)
+    # Додаємо поле tags у mixes (якщо його ще немає)
+    try:
+        cursor.execute("ALTER TABLE mixes ADD COLUMN tags TEXT")
+    except sqlite3.OperationalError:
+        pass
+
+
+
+def get_schema_version(conn):
+    cur = conn.cursor()
+    cur.execute("CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL)")
+    cur.execute("SELECT version FROM schema_version LIMIT 1")
+    row = cur.fetchone()
+    if row is None:
+        cur.execute("INSERT INTO schema_version(version) VALUES (1)")
         conn.commit()
+        return 1
+    return row[0]
 
 
+def set_schema_version(conn, v):
+    cur = conn.cursor()
+    cur.execute("UPDATE schema_version SET version = ?", (v,))
+    conn.commit()
+
+
+
+def add_mix(title, youtube, soundcloud, cover_path, tags):
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO mixes (title, youtube, soundcloud, cover, tags)
+            VALUES (?, ?, ?, ?, ?)
+        """, (title, youtube, soundcloud, cover_path, tags))
+        conn.commit()
 
 def get_all_mixes():
     with get_connection() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT id, title, youtube, soundcloud, cover FROM mixes ORDER BY id DESC")
+        cur.execute("SELECT id, title, youtube, soundcloud, cover, tags FROM mixes ORDER BY id DESC")
         return cur.fetchall()
 
 def get_mix_by_id(mix_id):
     with get_connection() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT id, title, youtube, soundcloud, cover FROM mixes WHERE id=?", (mix_id,))
+        cur.execute("SELECT id, title, youtube, soundcloud, cover, tags FROM mixes WHERE id=?", (mix_id,))
         return cur.fetchone()
 
 

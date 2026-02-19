@@ -78,14 +78,16 @@ def mixes_page():
 
     mixes = []
     for m in raw_mixes:
-        mix_id, title, youtube, soundcloud, cover = m
+        mix_id, title, youtube, soundcloud, cover, tags = m
         mixes.append({
             "id": mix_id,
             "title": title,
-            "cover": cover
+            "cover": cover,
+            "tags": tags
         })
 
     return render_template("mixes.html", mixes=mixes)
+
 
 @app.route("/add-mix", methods=["GET", "POST"])
 
@@ -96,11 +98,17 @@ def add_mix_page():
     title_value = ""
     youtube_value = ""
     soundcloud_value = ""
+    tags_value = ""
 
     if request.method == "POST":
         title_value = request.form.get("title", "")
         youtube_value = request.form.get("youtube", "")
         soundcloud_value = request.form.get("soundcloud", "")
+        tags_value = request.form.get("tags", "")
+        # нормалізація тегів (comma-style)
+        raw_tags = request.form.get("tags", "")
+        tags_list = [t.strip().lower() for t in raw_tags.split(",") if t.strip()]
+        tags_value = ", ".join(tags_list)
 
         cover_path = None
         file = request.files.get("cover")
@@ -153,17 +161,15 @@ def add_mix_page():
 
             # 3) Додаємо мікс тільки якщо немає помилок (включно з картинкою)
             if not error_msg:
-                add_mix(title_value.strip(), youtube_value.strip(), soundcloud_value.strip(), cover_path)
+                add_mix(title_value.strip(), youtube_value.strip(), soundcloud_value.strip(), cover_path, tags_value.strip())
                 return redirect("/mixes")
 
-    return render_template(
-        "add_mix.html",
-        error_msg=error_msg,
-        title_value=title_value,
-        youtube_value=youtube_value,
-        soundcloud_value=soundcloud_value
-    )
-
+    return render_template("add_mix.html",
+                           error_msg=error_msg,
+                           title_value=title_value,
+                           youtube_value=youtube_value,
+                           soundcloud_value=soundcloud_value,
+                           tags_value=tags_value)
 
 @app.route("/mix/<int:mix_id>", methods=["GET", "POST"])
 def mix_detail(mix_id):
@@ -201,7 +207,7 @@ def mix_detail(mix_id):
     tracks_raw = get_tracks_for_mix(mix_id)
 
     # розпаковка міксу
-    mix_id_db, mix_title, youtube, sc_mix, cover = mix
+    mix_id_db, mix_title, youtube, sc_mix, cover, tags = mix
 
     # підготуємо треки для шаблону як dict-об’єкти
     tracks = []
@@ -223,7 +229,8 @@ def mix_detail(mix_id):
         cover=cover,
         cover_error_msg=cover_error_msg,
         track_error_msg=track_error_msg,
-        tracks=tracks
+        tracks=tracks,
+        tags=tags
     )
 
 def _normalize_time(t: str) -> str:
@@ -241,8 +248,7 @@ def _normalize_time(t: str) -> str:
 
 def _strip_brackets_tail(s: str) -> str:
     """Відрізаємо хвіст типу [8m 21s] або [14m]"""
-    return re.sub(r"\s*\[[^\]]+\]\s*$", "", s).strip()
-
+    return re.sub(r"\s*\[[^]]+]\s*$", "", s).strip()
 
 @app.route("/mix/<int:mix_id>/import-tracks", methods=["POST"])
 def import_tracks(mix_id):
@@ -260,7 +266,7 @@ def import_tracks(mix_id):
     for line in lines:
         # ---- 0) пропускаємо службові рядки ----
         low = line.lower()
-        if low.startswith("http://") or low.startswith("https://"):
+        if "://" in low:
             continue
         if low.startswith("disc "):
             continue
@@ -326,6 +332,11 @@ def import_tracks(mix_id):
                         title = line.strip()
 
         # мінімальна валідація
+        title = title.strip()
+        artist = artist.strip()
+        soundcloud = soundcloud.strip()
+        time_value = time_value.strip()
+
         if not title:
             continue
 
