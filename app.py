@@ -53,38 +53,18 @@ def home():
 
 @app.route("/mixes")
 def mixes_page():
-    mixes = get_all_mixes()
-    html = "<h2>Список міксів</h2>"
-    html += '<p><a href="/add-mix">Додати мікс</a> | <a href="/">На головну</a></p>'
+    raw_mixes = get_all_mixes()
 
-    if not mixes:
-        html += "<p>Поки що немає міксів.</p>"
-    else:
-        html += "<ul style='list-style:none;padding-left:0;'>"
+    mixes = []
+    for m in raw_mixes:
+        mix_id, title, youtube, soundcloud, cover = m
+        mixes.append({
+            "id": mix_id,
+            "title": title,
+            "cover": cover
+        })
 
-        for mix_id, title, youtube, soundcloud, cover in mixes:
-            cover_html = ""
-            if cover:
-                cover_url = "/" + cover.replace("\\", "/")
-                cover_html = f"""
-                <img src="{cover_url}" alt="cover"
-                     style="width:64px;height:64px;object-fit:cover;border:1px solid #ccc;border-radius:8px;margin-right:10px;">
-                """
-
-            html += f"""
-            <li style="display:flex;align-items:center;margin:8px 0;">
-                {cover_html}
-                <a href="/mix/{mix_id}">{title}</a>
-                <form method="post" action="/delete-mix/{mix_id}" style="display:inline;margin-left:12px;"
-                      onsubmit="return confirm('Ви впевнені, що бажаєте це зробити?');">
-                    <button type="submit" style="color:red;">Видалити</button>
-                </form>
-            </li>
-            """
-
-        html += "</ul>"
-
-    return html
+    return render_template("mixes.html", mixes=mixes)
 
 @app.route("/add-mix", methods=["GET", "POST"])
 
