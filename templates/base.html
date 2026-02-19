@@ -17,7 +17,7 @@
 {% block content %}{% endblock %}
 
 <!-- Кнопка вгору (поки завжди видима; зробимо "тільки при скролі" пізніше) -->
-<a href="#top"
+<a id="btnTop" href="#top"
    title="Вгору"
    style="
      position:fixed;
@@ -30,11 +30,42 @@
      text-decoration:none;
      color:#000;
      box-shadow:0 2px 6px rgba(0,0,0,0.15);
-     html { scroll-behavior: smooth; }
-     mark { padding: 0 2px; border-radius: 3px; }
+
+     display:none;          /* ⬅️ стартово прихована */
+     opacity:0;
+     transition:opacity .2s;
    ">⬆️</a>
 
+
 {% block scripts %}{% endblock %}
+
+<script>
+(function () {
+  const btn = document.getElementById("btnTop");
+  if (!btn) return;
+
+  function update() {
+    // показувати, якщо прокручено вниз хоча б на 200px
+    const y = window.scrollY || document.documentElement.scrollTop;
+
+    if (y > 200) {
+      btn.style.display = "block";
+      btn.style.opacity = "1";
+    } else {
+      btn.style.opacity = "0";
+      // трохи зачекаємо, щоб opacity встигло згаснути, і сховаємо display
+      setTimeout(() => {
+        const y2 = window.scrollY || document.documentElement.scrollTop;
+        if (y2 <= 200) btn.style.display = "none";
+      }, 200);
+    }
+  }
+
+  window.addEventListener("scroll", update, { passive: true });
+  window.addEventListener("resize", update);
+  update();
+})();
+</script>
 
 </body>
 </html>

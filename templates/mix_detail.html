@@ -1,15 +1,8 @@
-<!DOCTYPE html>
-<html lang="uk">
-<head>
-    <meta charset="UTF-8">
-    <title>Мікс: {{ mix_title }}</title>
-    <style>
-        html { scroll-behavior: smooth; }
-    </style>
-</head>
-<body>
+{% extends "base.html" %}
 
-<div id="top"></div>
+{% block title %}Мікс: {{ mix_title }}{% endblock %}
+
+{% block content %}
 
 <h2>Мікс: {{ mix_title }}</h2>
 
@@ -137,21 +130,4 @@
   <a href="/mixes">⬅️ Назад до списку міксів</a>
 </p>
 
-<!-- Кнопка вгору -->
-<a href="#top"
-   title="Вгору"
-   style="
-     position:fixed;
-     right:18px;
-     bottom:18px;
-     background:#f2f2f2;
-     border:1px solid #ccc;
-     border-radius:12px;
-     padding:10px 12px;
-     text-decoration:none;
-     color:#000;
-     box-shadow:0 2px 6px rgba(0,0,0,0.15);
-   ">⬆️</a>
-
-</body>
-</html>
+{% endblock %}
