@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Music Mix Database</title>
+</head>
+<body>
+
+<h1>Music Mix Database</h1>
+<p>Сайт працює ✅</p>
+
+<h3>Пошук треку</h3>
+<form method="get" action="/">
+    <input name="q" value="{{ q }}"
+           placeholder="Введіть назву треку або артиста..."
+           style="width:420px;padding:6px;">
+    <button type="submit">Пошук</button>
+    {% if q %}
+        <a href="/" style="margin-left:10px;">Очистити</a>
+    {% endif %}
+</form>
+
+{% if q %}
+    <h3>Результати для: {{ q }}</h3>
+
+    {% if not results %}
+        <p>Нічого не знайдено.</p>
+    {% else %}
+        <ul>
+        {% for r in results %}
+            <li>
+                <b>{{ r.track_label }}</b><br>
+                у міксі:
+                <a href="/mix/{{ r.mix_id }}">{{ r.mix_title }}</a>
+            </li>
+        {% endfor %}
+        </ul>
+    {% endif %}
+{% endif %}
+
+<p>
+    <a href="/mixes">Список міксів</a><br>
+    <a href="/add-mix">Додати мікс</a>
+</p>
+
+</body>
+</html>

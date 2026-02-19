@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect
+from flask import Flask, request, redirect, render_template
 from database import (
     init_db, add_mix, get_all_mixes, get_mix_by_id,
     add_track_to_mix, get_tracks_for_mix,
@@ -35,67 +35,21 @@ def home():
     results = []
 
     if q:
-        results = search_tracks(q)
+        raw = search_tracks(q)
 
-    html = "<h1>Music Mix Database</h1>"
-    html += "<p>Сайт працює ✅</p>"
+        # Підготуємо дані для шаблону
+        for mix_id, mix_title, cover, mix_track_id, artist, title, sc, time_value in raw:
+            track_label = title if not artist else f"{artist} — {title}"
+            if time_value:
+                track_label = f"[{time_value}] {track_label}"
 
-    # 🔎 Панель пошуку зверху
-    html += f"""
-    <h3>Пошук треку</h3>
-    <form method="get" action="/">
-        <input name="q" value="{q}" placeholder="Введіть назву треку або артиста..."
-               style="width:420px;padding:6px;">
-        <button type="submit">Пошук</button>
-        {"<a href='/' style='margin-left:10px;'>Очистити</a>" if q else ""}
-    </form>
-    """
+            results.append({
+                "mix_id": mix_id,
+                "mix_title": mix_title,
+                "track_label": track_label
+            })
 
-    # ✅ Результати пошуку
-    if q:
-        html += f"<h3>Результати для: {q}</h3>"
-
-        if not results:
-            html += "<p>Нічого не знайдено.</p>"
-        else:
-            html += "<ul style='list-style:none;padding-left:0;'>"
-            for mix_id, mix_title, cover, mix_track_id, artist, title, sc, time_value in results:
-
-                cover_html = ""
-                if cover:
-                    cover_url = "/" + cover.replace("\\", "/")
-                    cover_html = f"""
-                    <img src="{cover_url}" alt="cover"
-                         style="width:48px;height:48px;object-fit:cover;border:1px solid #ccc;border-radius:8px;margin-right:10px;">
-                    """
-
-                track_label = title if not artist else f"{artist} — {title}"
-                if time_value:
-                    track_label = f"[{time_value}] {track_label}"
-                if sc:
-                    track_label += f' (<a href="{sc}" target="_blank">SoundCloud</a>)'
-
-                html += f"""
-                <li style="display:flex;align-items:center;margin:8px 0;">
-                    {cover_html}
-                    <div>
-                        <div><b>{track_label}</b></div>
-                        <div style="color:gray;">
-                            у міксі: <a href="/mix/{mix_id}">{mix_title}</a>
-                        </div>
-                    </div>
-                </li>
-                """
-            html += "</ul>"
-
-    # ⬇️ Твоє стандартне меню (як було)
-    html += """
-    <p>
-        <a href="/mixes">Список міксів</a><br>
-        <a href="/add-mix">Додати мікс</a><br>
-    </p>
-    """
-    return html
+    return render_template("home.html", q=q, results=results)
 
 @app.route("/mixes")
 def mixes_page():
@@ -415,7 +369,7 @@ def mix_detail(mix_id):
       html { scroll-behavior: smooth; }
     </style>
     """
-    
+
     return html
 
 def _normalize_time(t: str) -> str:
