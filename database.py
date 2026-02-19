@@ -213,6 +213,19 @@ def search_tracks(query):
             ORDER BY m.id DESC, mt.id ASC
         """, (q, q))
         return cur.fetchall()
+def search_mixes(query):
+    q = f"%{query.strip()}%"
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id, title, youtube, soundcloud, cover
+            FROM mixes
+            WHERE title LIKE ?
+               OR youtube LIKE ?
+               OR soundcloud LIKE ?
+            ORDER BY id DESC
+        """, (q, q, q))
+        return cur.fetchall()
 
 def delete_mix_track(mix_track_id):
     with get_connection() as conn:

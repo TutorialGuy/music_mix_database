@@ -1,11 +1,8 @@
-<!DOCTYPE html>
-<html lang="uk">
-<head>
-    <meta charset="UTF-8">
-    <title>Music Mix Database</title>
-</head>
-<body>
+{% extends "base.html" %}
 
+{% block title %}Music Mix Database{% endblock %}
+
+{% block content %}
 <h1>Music Mix Database</h1>
 <p>Сайт працює ✅</p>
 
@@ -23,25 +20,45 @@
 {% if q %}
     <h3>Результати для: {{ q }}</h3>
 
-    {% if not results %}
+    {% if not mix_results and not track_results %}
         <p>Нічого не знайдено.</p>
     {% else %}
-        <ul>
-        {% for r in results %}
-            <li>
-                <b>{{ r.track_label }}</b><br>
-                у міксі:
-                <a href="/mix/{{ r.mix_id }}">{{ r.mix_title }}</a>
-            </li>
-        {% endfor %}
-        </ul>
+
+        {% if mix_results %}
+            <h3>Мікси</h3>
+            <ul style="list-style:none;padding-left:0;">
+                {% for m in mix_results %}
+                    <li style="display:flex;align-items:center;margin-bottom:10px;">
+                        {% if m.cover %}
+                            <img src="/{{ m.cover }}"
+                                 style="width:48px;height:48px;object-fit:cover;border-radius:8px;margin-right:10px;">
+                        {% endif %}
+                        <a href="/mix/{{ m.mix_id }}"><b>{{ m.title_html|safe }}</b></a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        {% if track_results %}
+            <h3>Треки</h3>
+            <ul>
+                {% for r in track_results %}
+                    <li style="margin-bottom:8px;">
+                        <b>{{ r.track_label_html|safe }}</b><br>
+                        у міксі:
+                        <a href="/mix/{{ r.mix_id }}">{{ r.mix_title_html|safe }}</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
     {% endif %}
 {% endif %}
+
+<hr style="margin-top:20px;">
 
 <p>
     <a href="/mixes">Список міксів</a><br>
     <a href="/add-mix">Додати мікс</a>
 </p>
-
-</body>
-</html>
+{% endblock %}

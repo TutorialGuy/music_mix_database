@@ -5,12 +5,13 @@ from database import (
     get_mix_track_row, update_mix_track,
     get_mix_cover, update_mix_cover,
     delete_mix_track, delete_mix,
-    search_tracks
+    search_tracks, search_mixes
 )
 import os
 from werkzeug.utils import secure_filename
 from PIL import Image
 import re
+from markupsafe import escape, Markup
 
 app = Flask(__name__)
 
@@ -29,27 +30,47 @@ def slugify(text: str) -> str:
     text = re.sub(r"\s+", "-", text)      # пробіли -> "-"
     return text.strip("-")
 
+def highlight(text: str, query: str) -> Markup:
+    if not text:
+        return Markup("")
+    if not query:
+        return Markup(escape(text))
+
+    safe_text = str(escape(text))
+    pattern = re.compile(re.escape(query), re.IGNORECASE)
+    highlighted = pattern.sub(lambda m: f"<mark>{m.group(0)}</mark>", safe_text)
+    return Markup(highlighted)
+
+
 @app.route("/", methods=["GET"])
 def home():
     q = request.args.get("q", "").strip()
-    results = []
+
+    track_results = []
+    mix_results = []
 
     if q:
-        raw = search_tracks(q)
-
-        # Підготуємо дані для шаблону
-        for mix_id, mix_title, cover, mix_track_id, artist, title, sc, time_value in raw:
+        raw_tracks = search_tracks(q)
+        for mix_id, mix_title, cover, mix_track_id, artist, title, sc, time_value in raw_tracks:
             track_label = title if not artist else f"{artist} — {title}"
             if time_value:
                 track_label = f"[{time_value}] {track_label}"
 
-            results.append({
+            track_results.append({
                 "mix_id": mix_id,
-                "mix_title": mix_title,
-                "track_label": track_label
+                "mix_title_html": highlight(mix_title, q),
+                "track_label_html": highlight(track_label, q)
             })
 
-    return render_template("home.html", q=q, results=results)
+        raw_mixes = search_mixes(q)
+        for mix_id, title, youtube, soundcloud, cover in raw_mixes:
+            mix_results.append({
+                "mix_id": mix_id,
+                "title_html": highlight(title, q),
+                "cover": cover
+            })
+
+    return render_template("home.html", q=q, track_results=track_results, mix_results=mix_results)
 
 @app.route("/mixes")
 def mixes_page():
@@ -152,7 +173,7 @@ def mix_detail(mix_id):
 
     track_error_msg = ""
 
-    # ---- помилки обкладинки (тільки новий механізм) ----
+    # помилки обкладинки
     cover_error_msg = ""
     cover_err = request.args.get("cover_err", "")
     if cover_err == "format":
@@ -164,7 +185,7 @@ def mix_detail(mix_id):
     elif cover_err == "bad":
         cover_error_msg = "❌ Не вдалося прочитати зображення. Спробуй інший файл."
 
-    # ---- додавання треку ----
+    # додавання треку
     if request.method == "POST":
         artist = request.form.get("artist", "")
         title = request.form.get("title", "")
@@ -172,163 +193,38 @@ def mix_detail(mix_id):
         sc_track = request.form.get("soundcloud", "")
 
         ok = add_track_to_mix(mix_id, artist, title, sc_track, time_value)
-
         if ok:
             return redirect(f"/mix/{mix_id}")
         else:
             track_error_msg = "❌ Введіть хоча б назву треку (поле обов'язкове)."
 
-    tracks = get_tracks_for_mix(mix_id)
+    tracks_raw = get_tracks_for_mix(mix_id)
 
-    # важливо: тут soundcloud — це soundcloud МІКСУ, не треку
-    mix_id, mix_title, youtube, sc_mix, cover = mix
+    # розпаковка міксу
+    mix_id_db, mix_title, youtube, sc_mix, cover = mix
 
-    html = f'<div id="top"></div><h2>Мікс: {mix_title}</h2>'
-    html += """
-    <p style="margin-top:6px;">
-      <a href="/" style="margin-right:12px;">🏠 На головну</a>
-      <a href="/mixes">⬅️ Назад до списку міксів</a>
-    </p>
-    """
+    # підготуємо треки для шаблону як dict-об’єкти
+    tracks = []
+    for mix_track_id, artist, title, sc_track, time_value in tracks_raw:
+        tracks.append({
+            "mix_track_id": mix_track_id,
+            "artist": artist,
+            "title": title,
+            "sc_track": sc_track,
+            "time_value": time_value
+        })
 
-    # --- Двоколонковий блок: зліва трекліст, справа обкладинка ---
-    html += """
-    <div style="display:flex; gap:20px; align-items:flex-start; margin-top:10px;">
-      <div style="flex: 2; min-width: 420px;">
-    """
-
-    # ---- трекліст ----
-    html += "<h3>Трекліст</h3>"
-    if not tracks:
-        html += "<p>Поки що немає треків.</p>"
-    else:
-        html += "<ol>"
-        for mix_track_id, artist, title, sc_track, time_value in tracks:
-            label = title if not artist else f"{artist} — {title}"
-            if time_value:
-                label = f"[{time_value}] {label}"
-            if sc_track:
-                label += f' (<a href="{sc_track}" target="_blank">SoundCloud</a>)'
-            label += f' <a href="/edit-track/{mix_track_id}">[редагувати]</a>'
-            label += f' <a href="/delete-track/{mix_track_id}" style="color:red;">[видалити]</a>'
-            html += f"<li>{label}</li>"
-        html += "</ol>"
-
-    html += """
-      </div>
-      <div style="flex: 1; min-width: 260px;">
-    """
-
-    # прев'ю обкладинки (праворуч)
-    if cover:
-        cover_url = "/" + cover.replace("\\", "/")
-        html += f"""
-        <div style="margin-bottom:10px;">
-            <img src="{cover_url}" alt="cover"
-                 style="width:260px; height:260px; object-fit:cover; border:1px solid #ccc; border-radius:10px;">
-        </div>
-        """
-
-    html += "<h3 style='margin-top:0;'>Обкладинка</h3>"
-
-    if cover_error_msg:
-        html += f'<p style="color:red;"><b>{cover_error_msg}</b></p>'
-
-    html += f"""
-    <form method="post" action="/mix/{mix_id}/update-cover" enctype="multipart/form-data">
-        <input type="file" name="cover" accept="image/*"><br>
-        <small style="display:block;color:gray;margin-top:4px;">
-            Формати: JPG/JPEG, PNG, BMP, WEBP, GIF<br>
-            Макс: 3MB • До 3000×3000
-        </small>
-        <button type="submit" style="margin-top:8px;">Оновити</button>
-    </form>
-    """
-
-    # ---- посилання міксу ----
-    html += "<hr style='margin:15px 0;'>"
-    html += "<h3 style='margin-top:0;'>Посилання</h3>"
-    html += "<p>"
-    if youtube:
-        html += f'YouTube: <a href="{youtube}" target="_blank">{youtube}</a><br>'
-    if sc_mix:
-        html += f'SoundCloud: <a href="{sc_mix}" target="_blank">{sc_mix}</a><br>'
-    html += "</p>"
-
-    html += """
-      </div>
-    </div>
-    """
-
-    # ---- помилка додавання треку ----
-    if track_error_msg:
-        html += f'<p style="color:red;"><b>{track_error_msg}</b></p>'
-
-    # ---- форма додавання треку ----
-    html += """
-    <h3>Імпорт трекліста (з тексту)</h3>
-    <form method="post" action="/mix/{mix_id}/import-tracks">
-        <textarea name="bulk"
-          placeholder="Встав сюди трекліст (кожен трек з нового рядка)
-
-    Підтримуються формати:
-    • 00:04:32 Artist - Track
-    • 04:32 Artist - Track
-    • Artist - Track
-    • Track"
-          style="width:700px;height:220px;padding:10px;font-family:monospace;"></textarea>
-
-        <button type="submit">Імпортувати</button>
-    </form>
-    """.replace("{mix_id}", str(mix_id))
-
-    html += """
-    <h3>Додати трек</h3>
-    <form method="post">
-        <p>Таймкод (ГГ:ХХ:СС):<br>
-        <input name="time" placeholder="00:00:00" style="width:150px"></p>
-
-        <p>Артист:<br>
-        <input name="artist" style="width:300px"></p>
-
-        <p>Назва треку:<br>
-        <input name="title" style="width:300px"></p>
-
-        <p>SoundCloud:<br>
-        <input name="soundcloud" style="width:400px"></p>
-
-        <button type="submit">Додати</button>
-    </form>
-    """
-
-    html += """
-    <p style="margin-top:20px;">
-      <a href="/" style="margin-right:12px;">🏠 На головну</a>
-      <a href="/mixes">⬅️ Назад до списку міксів</a>
-    </p>
-    """
-    html += """
-    <a href="#top"
-       title="Вгору"
-       style="
-         position:fixed;
-         right:18px;
-         bottom:18px;
-         background:#f2f2f2;
-         border:1px solid #ccc;
-         border-radius:12px;
-         padding:10px 12px;
-         text-decoration:none;
-         color:#000;
-         box-shadow:0 2px 6px rgba(0,0,0,0.15);
-       ">⬆️</a>
-
-    <style>
-      html { scroll-behavior: smooth; }
-    </style>
-    """
-
-    return html
+    return render_template(
+        "mix_detail.html",
+        mix_id=mix_id_db,
+        mix_title=mix_title,
+        youtube=youtube,
+        sc_mix=sc_mix,
+        cover=cover,
+        cover_error_msg=cover_error_msg,
+        track_error_msg=track_error_msg,
+        tracks=tracks
+    )
 
 def _normalize_time(t: str) -> str:
     """Приводимо 0:00 / 12:34 / 1:02:03 до HH:MM:SS"""
