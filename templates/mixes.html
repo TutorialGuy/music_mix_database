@@ -29,11 +29,11 @@
                     </a>
                 </div>
 
-                <a href="/delete-mix/{{ mix.id }}"
-                   onclick="return confirm('Ви впевнені, що хочете видалити цей мікс?');"
-                   style="color:red;margin-left:20px;">
-                   🗑 Видалити
-                </a>
+                <form method="post" action="/delete-mix/{{ mix.id }}" style="display:inline;"
+                      onsubmit="return confirm('Ви впевнені, що бажаєте видалити цей мікс?');">
+                  <button type="submit" class="btn-danger" style="margin-left:12px;">видалити</button>
+                </form>
+
             </li>
         {% endfor %}
     </ul>

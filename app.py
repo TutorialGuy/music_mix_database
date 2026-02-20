@@ -3,7 +3,7 @@ from database import (
     init_db, add_mix, get_all_mixes, get_mix_by_id,
     add_track_to_mix, get_tracks_for_mix,
     get_mix_track_row, update_mix_track,
-    get_mix_cover, update_mix_cover,
+    get_mix_cover, update_mix_cover, update_mix_links,
     delete_mix_track, delete_mix,
     search_tracks, search_mixes,
     get_all_tags, set_mix_tags, get_mix_tags, update_mix_tags
@@ -12,6 +12,8 @@ import os
 from werkzeug.utils import secure_filename
 from PIL import Image
 import re
+import json
+import ast
 from markupsafe import escape, Markup
 
 app = Flask(__name__)
@@ -42,6 +44,61 @@ def highlight(text: str, query: str) -> Markup:
     highlighted = pattern.sub(lambda m: f"<mark>{m.group(0)}</mark>", safe_text)
     return Markup(highlighted)
 
+def parse_tags_input(raw: str) -> list[str]:
+    """
+    Приймає теги з форми (комами), але також вміє 'врятувати'
+    випадки, коли туди потрапив рядок виду:
+      "['game','jazz']" або '["game","jazz"]'
+    Повертає чистий список тегів без лапок/дужок.
+    """
+    if not raw:
+        return []
+
+    s = raw.strip()
+
+    # 1) Якщо це схоже на JSON-масив: ["a","b"]
+    if s.startswith("[") and s.endswith("]"):
+        # пробуємо JSON
+        try:
+            data = json.loads(s)
+            if isinstance(data, list):
+                return [str(x).strip() for x in data if str(x).strip()]
+        except Exception:
+            pass
+
+        # пробуємо Python repr: ['a','b']
+        try:
+            data = ast.literal_eval(s)
+            if isinstance(data, list):
+                return [str(x).strip() for x in data if str(x).strip()]
+        except Exception:
+            pass
+
+        # якщо не вдалося — падатимемо до split нижче
+
+    # 2) Основний режим: комами
+    parts = [p.strip() for p in s.split(",")]
+
+    cleaned = []
+    for p in parts:
+        if not p:
+            continue
+        # знімаємо зайві лапки/дужки по краях
+        p = p.strip().strip("[](){}")
+        p = p.strip().strip("'").strip('"')
+        p = p.strip()
+        if p:
+            cleaned.append(p)
+
+    # прибрати дублікати з збереженням порядку
+    seen = set()
+    out = []
+    for t in cleaned:
+        key = t.lower()
+        if key not in seen:
+            seen.add(key)
+            out.append(t)
+    return out
 
 @app.route("/", methods=["GET"])
 def home():
@@ -221,6 +278,7 @@ def mix_detail(mix_id):
             "time_value": time_value
         })
 
+    sorted_tags = get_mix_tags(mix_id)
     return render_template(
         "mix_detail.html",
         mix_id=mix_id_db,
@@ -231,7 +289,7 @@ def mix_detail(mix_id):
         cover_error_msg=cover_error_msg,
         track_error_msg=track_error_msg,
         tracks=tracks,
-        tags=tags
+        tags=sorted_tags
     )
 
 @app.route("/tags")
@@ -267,7 +325,6 @@ def import_tracks(mix_id):
         return redirect(f"/mix/{mix_id}")
 
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
-    added = 0
 
     for line in lines:
         # ---- 0) пропускаємо службові рядки ----
@@ -347,8 +404,6 @@ def import_tracks(mix_id):
             continue
 
         ok = add_track_to_mix(mix_id, artist, title, soundcloud, time_value)
-        if ok:
-            added += 1
 
     return redirect(f"/mix/{mix_id}")
 
@@ -407,6 +462,20 @@ def edit_track(mix_track_id):
     html += f'<p><a href="/mix/{mix_id}">Назад до міксу</a> | <a href="/">На головну</a></p>'
     return html
 
+@app.route("/mix/<int:mix_id>/update-track/<int:mix_track_id>", methods=["POST"])
+def update_track_inline(mix_id, mix_track_id):
+    artist = request.form.get("artist", "")
+    title = request.form.get("title", "")
+    soundcloud = request.form.get("soundcloud", "")
+    time_value = request.form.get("time", "")
+
+    ok = update_mix_track(mix_track_id, artist, title, soundcloud, time_value)
+    if not ok:
+        return redirect(f"/mix/{mix_id}?err=track_title_required")
+
+    return redirect(f"/mix/{mix_id}")
+
+
 @app.route("/mix/<int:mix_id>/update-cover", methods=["POST"])
 def update_cover(mix_id):
     mix = get_mix_by_id(mix_id)
@@ -442,7 +511,7 @@ def update_cover(mix_id):
 
     # 4) зберігаємо новий файл з назвою від назви міксу
     import time
-    mix_id_db, mix_title, youtube, soundcloud, cover = mix
+    mix_id_db, mix_title, youtube, soundcloud, cover, tags = mix
 
     safe_title = slugify(mix_title) or f"mix_{mix_id}"
     timestamp = int(time.time())
@@ -479,10 +548,18 @@ def update_tags(mix_id):
     tags_list = [t.strip().lower() for t in raw_tags.split(",") if t.strip()]
     tags_value = ", ".join(tags_list)
 
-    set_mix_tags(mix_id, tags_value)
+    set_mix_tags(mix_id, tags_list)
     # (за бажанням залишимо також mixes.tags як “кеш”, але не обов’язково)
     update_mix_tags(mix_id, tags_value)
 
+    return redirect(f"/mix/{mix_id}")
+
+@app.route("/mix/<int:mix_id>/update-links", methods=["POST"])
+def update_mix_links_inline(mix_id):
+    youtube = request.form.get("youtube", "")
+    sc_mix = request.form.get("soundcloud", "")
+
+    update_mix_links(mix_id, youtube, sc_mix)
     return redirect(f"/mix/{mix_id}")
 
 @app.route("/delete-track/<int:mix_track_id>")
@@ -498,10 +575,9 @@ def delete_track(mix_track_id):
     return redirect(f"/mix/{mix_id}")
 
 @app.route("/delete-mix/<int:mix_id>", methods=["POST"])
-def delete_mix_route(mix_id):
+def delete_mix_page(mix_id):
     delete_mix(mix_id)
     return redirect("/mixes")
-
 
 if __name__ == "__main__":
     init_db()

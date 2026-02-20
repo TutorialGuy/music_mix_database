@@ -24,21 +24,36 @@
         {% else %}
             <ol>
                 {% for t in tracks %}
-                    <li>
-                        {% set label = t.title if not t.artist else t.artist ~ " — " ~ t.title %}
-                        {% if t.time_value %}
-                            {% set label = "[" ~ t.time_value ~ "] " ~ label %}
-                        {% endif %}
+                   <li>
+                      {% if t.time_value %}
+                        <b>[{{ t.time_value }}]</b>
+                      {% endif %}
 
-                        <b>{{ label }}</b>
+                      {% if t.artist %}
+                        <b>{{ t.artist }} — {{ t.title }}</b>
+                      {% else %}
+                        <b>{{ t.title }}</b>
+                      {% endif %}
 
-                        {% if t.sc_track %}
-                            ( <a href="{{ t.sc_track }}" target="_blank">SoundCloud</a> )
-                        {% endif %}
+                      {% if t.sc_track %}
+                        ( <a href="{{ t.sc_track }}" target="_blank">SoundCloud</a> )
+                      {% endif %}
 
-                        <a href="/edit-track/{{ t.mix_track_id }}">[редагувати]</a>
-                        <a href="/delete-track/{{ t.mix_track_id }}" style="color:red;">[видалити]</a>
+                      <a href="/delete-track/{{ t.mix_track_id }}" style="color:red; margin-left:10px;">[видалити]</a>
+
+                      <details style="margin-top:6px;">
+                        <summary style="cursor:pointer;">✏️ редагувати</summary>
+
+                        <form method="post" action="/mix/{{ mix_id }}/update-track/{{ t.mix_track_id }}" style="margin-top:8px;">
+                          <input name="time" value="{{ t.time_value or '' }}" placeholder="00:00:00" style="width:120px;">
+                          <input name="artist" value="{{ t.artist or '' }}" placeholder="Артист" style="width:220px;">
+                          <input name="title" value="{{ t.title or '' }}" placeholder="Назва треку *" style="width:260px;">
+                          <input name="soundcloud" value="{{ t.sc_track or '' }}" placeholder="SoundCloud URL" style="width:260px;">
+                          <button type="submit">Зберегти</button>
+                        </form>
+                      </details>
                     </li>
+
                 {% endfor %}
             </ol>
         {% endif %}
@@ -47,7 +62,7 @@
 
         {% if tags %}
             <p>
-                {% for tag in tags.split(",") %}
+                {% for tag in tags %}
                     <span class="tag">{{ tag.strip() }}</span>
                 {% endfor %}
             </p>
@@ -93,14 +108,36 @@
         <hr style="margin:15px 0;">
 
         <h3 style="margin-top:0;">Посилання</h3>
-        <p>
-            {% if youtube %}
-                YouTube: <a href="{{ youtube }}" target="_blank">{{ youtube }}</a><br>
-            {% endif %}
-            {% if sc_mix %}
-                SoundCloud: <a href="{{ sc_mix }}" target="_blank">{{ sc_mix }}</a><br>
-            {% endif %}
-        </p>
+
+{% if youtube %}
+  <p>YouTube: <a href="{{ youtube }}" target="_blank">{{ youtube }}</a></p>
+{% else %}
+  <p>YouTube: <span style="color:gray;">(немає)</span></p>
+{% endif %}
+
+{% if sc_mix %}
+  <p>SoundCloud: <a href="{{ sc_mix }}" target="_blank">{{ sc_mix }}</a></p>
+{% else %}
+  <p>SoundCloud: <span style="color:gray;">(немає)</span></p>
+{% endif %}
+
+<details style="margin-top:10px;">
+  <summary style="cursor:pointer;">✏️ редагувати посилання</summary>
+
+  <form method="post" action="/mix/{{ mix_id }}/update-links" style="margin-top:8px;">
+    <p style="margin:6px 0;">
+      YouTube:<br>
+      <input name="youtube" value="{{ youtube or '' }}" style="width:100%;">
+    </p>
+
+    <p style="margin:6px 0;">
+      SoundCloud:<br>
+      <input name="soundcloud" value="{{ sc_mix or '' }}" style="width:100%;">
+    </p>
+
+    <button type="submit">Зберегти</button>
+  </form>
+</details>
     </div>
 </div>
 

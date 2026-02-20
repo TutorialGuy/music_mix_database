@@ -200,22 +200,26 @@ def normalize_tags(raw: str) -> list[str]:
     return result
 
 
-def set_mix_tags(mix_id: int, raw_tags: str):
-    """Перезаписати теги міксу (зв’язка mix_tags). Самі tags не видаляємо ніколи."""
-    tags = normalize_tags(raw_tags)
-
+def set_mix_tags(mix_id: int, tags_list: list[str]) -> None:
     with get_connection() as conn:
-        cur = conn.cursor()
+        cursor = conn.cursor()
 
-        # 1) прибрати старі прив’язки
-        cur.execute("DELETE FROM mix_tags WHERE mix_id = ?", (mix_id,))
+        # прибираємо старі зв'язки
+        cursor.execute("DELETE FROM mix_tags WHERE mix_id = ?", (mix_id,))
 
-        # 2) додати/знайти tag_id та прив’язати
-        for tag in tags:
-            cur.execute("INSERT OR IGNORE INTO tags(name) VALUES (?)", (tag,))
-            cur.execute("SELECT id FROM tags WHERE name = ?", (tag,))
-            tag_id = cur.fetchone()[0]
-            cur.execute("INSERT OR IGNORE INTO mix_tags(mix_id, tag_id) VALUES (?, ?)", (mix_id, tag_id))
+        for tag in tags_list:
+            name = tag.strip().lower()
+            if not name:
+                continue
+
+            cursor.execute("INSERT OR IGNORE INTO tags(name) VALUES(?)", (name,))
+            cursor.execute("SELECT id FROM tags WHERE name = ?", (name,))
+            tag_id = cursor.fetchone()[0]
+
+            cursor.execute(
+                "INSERT OR IGNORE INTO mix_tags(mix_id, tag_id) VALUES(?, ?)",
+                (mix_id, tag_id)
+            )
 
         conn.commit()
 
@@ -281,14 +285,20 @@ def get_mix_track_row(mix_track_id):
         """, (mix_track_id,))
         return cur.fetchone()
 
-def update_mix_track(mix_track_id, artist, title, soundcloud, time_value):
-    artist = (artist or "").strip()
+def update_mix_track(mix_track_id: int, artist: str, title: str, soundcloud: str, time_value: str) -> bool:
     title = (title or "").strip()
-    soundcloud = (soundcloud or "").strip()
-    time_value = (time_value or "").strip()
-
     if not title:
         return False
+
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE mix_tracks
+            SET artist = ?, title = ?, soundcloud = ?, time = ?
+            WHERE id = ?
+        """, (artist.strip(), title, soundcloud.strip(), time_value.strip(), mix_track_id))
+        conn.commit()
+    return True
 
     artist_db = artist if artist else None
     soundcloud_db = soundcloud if soundcloud else None
@@ -309,6 +319,16 @@ def update_mix_tags(mix_id: int, tags: str):
     with get_connection() as conn:
         cur = conn.cursor()
         cur.execute("UPDATE mixes SET tags = ? WHERE id = ?", (tags, mix_id))
+        conn.commit()
+
+def update_mix_links(mix_id: int, youtube: str, soundcloud: str) -> None:
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE mixes
+            SET youtube = ?, soundcloud = ?
+            WHERE id = ?
+        """, (youtube.strip(), soundcloud.strip(), mix_id))
         conn.commit()
 
 def get_mix_cover(mix_id):
