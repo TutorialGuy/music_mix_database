@@ -3,7 +3,7 @@ from database import (
     init_db, add_mix, get_all_mixes, get_mix_by_id,
     add_track_to_mix, get_tracks_for_mix,
     get_mix_track_row, update_mix_track,
-    get_mix_cover, update_mix_cover,
+    get_mix_cover, update_mix_cover, update_mix_tags,
     delete_mix_track, delete_mix,
     search_tracks, search_mixes
 )
@@ -459,6 +459,21 @@ def update_cover(mix_id):
             except OSError:
                 pass
 
+    return redirect(f"/mix/{mix_id}")
+
+@app.route("/mix/<int:mix_id>/update-tags", methods=["POST"])
+def update_tags(mix_id):
+    mix = get_mix_by_id(mix_id)
+    if not mix:
+        return redirect("/mixes")
+
+    raw_tags = request.form.get("tags", "")
+
+    # нормалізація Philomena-style
+    tags_list = [t.strip().lower() for t in raw_tags.split(",") if t.strip()]
+    tags_value = ", ".join(tags_list)
+
+    update_mix_tags(mix_id, tags_value)
     return redirect(f"/mix/{mix_id}")
 
 @app.route("/delete-track/<int:mix_track_id>")

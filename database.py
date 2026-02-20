@@ -217,6 +217,12 @@ def update_mix_track(mix_track_id, artist, title, soundcloud, time_value):
 
     return True
 
+def update_mix_tags(mix_id: int, tags: str):
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("UPDATE mixes SET tags = ? WHERE id = ?", (tags, mix_id))
+        conn.commit()
+
 def get_mix_cover(mix_id):
     with get_connection() as conn:
         cur = conn.cursor()
@@ -244,6 +250,7 @@ def search_tracks(query):
             ORDER BY m.id DESC, mt.id ASC
         """, (q, q))
         return cur.fetchall()
+
 def search_mixes(query):
     q = f"%{query.strip()}%"
     with get_connection() as conn:
