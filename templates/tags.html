@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Теги{% endblock %}
+
+{% block content %}
+<h2>Усі теги</h2>
+
+<p>
+  <a href="/" style="margin-right:12px;">🏠 На головну</a>
+  <a href="/mixes">🎧 Список міксів</a>
+</p>
+
+{% if not tags %}
+  <p>Поки що немає тегів.</p>
+{% else %}
+  <div>
+    {% for name, cnt in tags %}
+      <a href="/?q={{ name }}" class="tag">{{ name }}</a>
+      <small style="color:gray;">({{ cnt }})</small>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{% endblock %}

@@ -3,9 +3,10 @@ from database import (
     init_db, add_mix, get_all_mixes, get_mix_by_id,
     add_track_to_mix, get_tracks_for_mix,
     get_mix_track_row, update_mix_track,
-    get_mix_cover, update_mix_cover, update_mix_tags,
+    get_mix_cover, update_mix_cover,
     delete_mix_track, delete_mix,
-    search_tracks, search_mixes
+    search_tracks, search_mixes,
+    get_all_tags, set_mix_tags, get_mix_tags, update_mix_tags
 )
 import os
 from werkzeug.utils import secure_filename
@@ -232,6 +233,11 @@ def mix_detail(mix_id):
         tracks=tracks,
         tags=tags
     )
+
+@app.route("/tags")
+def tags_page():
+    tags = get_all_tags()
+    return render_template("tags.html", tags=tags)
 
 def _normalize_time(t: str) -> str:
     """Приводимо 0:00 / 12:34 / 1:02:03 до HH:MM:SS"""
@@ -473,7 +479,10 @@ def update_tags(mix_id):
     tags_list = [t.strip().lower() for t in raw_tags.split(",") if t.strip()]
     tags_value = ", ".join(tags_list)
 
+    set_mix_tags(mix_id, tags_value)
+    # (за бажанням залишимо також mixes.tags як “кеш”, але не обов’язково)
     update_mix_tags(mix_id, tags_value)
+
     return redirect(f"/mix/{mix_id}")
 
 @app.route("/delete-track/<int:mix_track_id>")

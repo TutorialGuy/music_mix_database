@@ -6,7 +6,7 @@ DB_NAME = "music.db"
 
 def get_connection():
     return sqlite3.connect(DB_NAME)
-
+    conn.execute("PRAGMA foreign_keys = ON;")
 
 def init_db():
     with get_connection() as conn:
@@ -50,6 +50,23 @@ def init_db():
         )
         """)
 
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tags (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE
+        )
+        """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS mix_tags (
+            mix_id INTEGER NOT NULL,
+            tag_id INTEGER NOT NULL,
+            PRIMARY KEY (mix_id, tag_id),
+            FOREIGN KEY (mix_id) REFERENCES mixes(id) ON DELETE CASCADE,
+            FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+        )
+        """)
+
         try:
             cursor.execute("ALTER TABLE mix_tracks ADD COLUMN pos INTEGER")
         except sqlite3.OperationalError:
@@ -68,7 +85,7 @@ def init_db():
         cursor.execute("ALTER TABLE mixes ADD COLUMN tags TEXT")
     except sqlite3.OperationalError:
         pass
-
+    migrate_tags_from_column()
 
 
 def get_schema_version(conn):
@@ -171,6 +188,77 @@ def add_track_to_mix(mix_id, artist, title, soundcloud, time_value):
         )
         conn.commit()
 
+def normalize_tags(raw: str) -> list[str]:
+    tags_list = [t.strip().lower() for t in raw.split(",") if t.strip()]
+    # прибираємо дублікати, але зберігаємо порядок
+    seen = set()
+    result = []
+    for t in tags_list:
+        if t not in seen:
+            seen.add(t)
+            result.append(t)
+    return result
+
+
+def set_mix_tags(mix_id: int, raw_tags: str):
+    """Перезаписати теги міксу (зв’язка mix_tags). Самі tags не видаляємо ніколи."""
+    tags = normalize_tags(raw_tags)
+
+    with get_connection() as conn:
+        cur = conn.cursor()
+
+        # 1) прибрати старі прив’язки
+        cur.execute("DELETE FROM mix_tags WHERE mix_id = ?", (mix_id,))
+
+        # 2) додати/знайти tag_id та прив’язати
+        for tag in tags:
+            cur.execute("INSERT OR IGNORE INTO tags(name) VALUES (?)", (tag,))
+            cur.execute("SELECT id FROM tags WHERE name = ?", (tag,))
+            tag_id = cur.fetchone()[0]
+            cur.execute("INSERT OR IGNORE INTO mix_tags(mix_id, tag_id) VALUES (?, ?)", (mix_id, tag_id))
+
+        conn.commit()
+
+
+def get_mix_tags(mix_id: int) -> list[str]:
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT t.name
+            FROM tags t
+            JOIN mix_tags mt ON mt.tag_id = t.id
+            WHERE mt.mix_id = ?
+            ORDER BY t.name
+        """, (mix_id,))
+        return [r[0] for r in cur.fetchall()]
+
+
+def get_all_tags() -> list[tuple[str, int]]:
+    """Повертає (tag_name, usage_count_in_mix_tags). Теги лишаються навіть якщо count=0."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT t.name, COUNT(mt.mix_id) as cnt
+            FROM tags t
+            LEFT JOIN mix_tags mt ON mt.tag_id = t.id
+            GROUP BY t.id
+            ORDER BY t.name
+        """)
+        return [(r[0], r[1]) for r in cursor.fetchall()]
+
+def migrate_tags_from_column():
+    """Одноразово переносить mixes.tags -> tags + mix_tags. Не шкодить, якщо запустити повторно."""
+    with get_connection() as conn:
+        cur = conn.cursor()
+
+        # беремо всі мікси, де tags не порожній
+        cur.execute("SELECT id, tags FROM mixes WHERE tags IS NOT NULL AND TRIM(tags) != ''")
+        rows = cur.fetchall()
+
+        for mix_id, raw in rows:
+            set_mix_tags(mix_id, raw)
+
+        conn.commit()
 
 def get_tracks_for_mix(mix_id):
     with get_connection() as conn:
