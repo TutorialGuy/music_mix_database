@@ -87,26 +87,7 @@ def init_db():
         pass
     migrate_tags_from_column()
 
-
-def get_schema_version(conn):
-    cur = conn.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL)")
-    cur.execute("SELECT version FROM schema_version LIMIT 1")
-    row = cur.fetchone()
-    if row is None:
-        cur.execute("INSERT INTO schema_version(version) VALUES (1)")
-        conn.commit()
-        return 1
-    return row[0]
-
-
-def set_schema_version(conn, v):
-    cur = conn.cursor()
-    cur.execute("UPDATE schema_version SET version = ?", (v,))
-    conn.commit()
-
-
-
+#MIXES#
 def add_mix(title, youtube, soundcloud, cover_path, tags):
     with get_connection() as conn:
         cur = conn.cursor()
@@ -128,7 +109,53 @@ def get_mix_by_id(mix_id):
         cur.execute("SELECT id, title, youtube, soundcloud, cover, tags FROM mixes WHERE id=?", (mix_id,))
         return cur.fetchone()
 
+def delete_mix(mix_id):
+    with get_connection() as conn:
+        cur = conn.cursor()
 
+        # 1️⃣ Дізнаємось шлях до обкладинки
+        cur.execute("SELECT cover FROM mixes WHERE id=?", (mix_id,))
+        row = cur.fetchone()
+
+        cover_path = row[0] if row and row[0] else None
+
+        # 2️⃣ Видаляємо треки
+        cur.execute("DELETE FROM mix_tracks WHERE mix_id=?", (mix_id,))
+
+        # 3️⃣ Видаляємо сам мікс
+        cur.execute("DELETE FROM mixes WHERE id=?", (mix_id,))
+
+        conn.commit()
+
+    # 4️⃣ Видаляємо файл обкладинки (після закриття з'єднання)
+    if cover_path:
+        full_path = os.path.join(os.getcwd(), cover_path)
+
+        if os.path.exists(full_path):
+            try:
+                os.remove(full_path)
+            except Exception:
+                pass  # якщо не вдалось — просто не падаємо
+
+    return True
+
+def update_mix_links(mix_id: int, youtube: str, soundcloud: str) -> None:
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE mixes
+            SET youtube = ?, soundcloud = ?
+            WHERE id = ?
+        """, (youtube.strip(), soundcloud.strip(), mix_id))
+        conn.commit()
+
+def update_mix_cover(mix_id, cover_path):
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("UPDATE mixes SET cover=? WHERE id=?", (cover_path, mix_id))
+        conn.commit()
+
+#TRACKS#
 def add_track_to_mix(mix_id, artist, title, soundcloud, time_value):
     artist = (artist or "").strip()
     title = (title or "").strip()
@@ -166,7 +193,6 @@ def add_track_to_mix(mix_id, artist, title, soundcloud, time_value):
 
     return True
 
-
     with get_connection() as conn:
         cur = conn.cursor()
 
@@ -188,17 +214,65 @@ def add_track_to_mix(mix_id, artist, title, soundcloud, time_value):
         )
         conn.commit()
 
-def normalize_tags(raw: str) -> list[str]:
-    tags_list = [t.strip().lower() for t in raw.split(",") if t.strip()]
-    # прибираємо дублікати, але зберігаємо порядок
-    seen = set()
-    result = []
-    for t in tags_list:
-        if t not in seen:
-            seen.add(t)
-            result.append(t)
-    return result
+def get_tracks_for_mix(mix_id):
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+        SELECT id, artist, title, soundcloud, time
+        FROM mix_tracks
+        WHERE mix_id = ?
+        ORDER BY pos
+        """, (mix_id,))
+        return cur.fetchall()
 
+def update_mix_track(mix_track_id: int, artist: str, title: str, soundcloud: str, time_value: str) -> bool:
+    title = (title or "").strip()
+    if not title:
+        return False
+
+def delete_mix_track(mix_track_id):
+    with get_connection() as conn:
+        cur = conn.cursor()
+
+        # дізнаємось mix_id та pos видаленого треку
+        cur.execute("""
+        SELECT mix_id, pos FROM mix_tracks WHERE id=?
+        """, (mix_track_id,))
+        row = cur.fetchone()
+
+        if not row:
+            return False
+
+        mix_id, deleted_pos = row
+
+        # видаляємо сам трек
+        cur.execute("""
+        DELETE FROM mix_tracks WHERE id=?
+        """, (mix_track_id,))
+
+        # зсуваємо всі треки нижче на -1
+        cur.execute("""
+        UPDATE mix_tracks
+        SET pos = pos - 1
+        WHERE mix_id=? AND pos > ?
+        """, (mix_id, deleted_pos))
+
+        conn.commit()
+
+    return True
+
+#TAGS#
+def get_mix_tags(mix_id: int) -> list[str]:
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT t.name
+            FROM tags t
+            JOIN mix_tags mt ON mt.tag_id = t.id
+            WHERE mt.mix_id = ?
+            ORDER BY t.name
+        """, (mix_id,))
+        return [r[0] for r in cur.fetchall()]
 
 def set_mix_tags(mix_id: int, tags) -> None:
     """
@@ -232,19 +306,6 @@ def set_mix_tags(mix_id: int, tags) -> None:
 
         conn.commit()
 
-def get_mix_tags(mix_id: int) -> list[str]:
-    with get_connection() as conn:
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT t.name
-            FROM tags t
-            JOIN mix_tags mt ON mt.tag_id = t.id
-            WHERE mt.mix_id = ?
-            ORDER BY t.name
-        """, (mix_id,))
-        return [r[0] for r in cur.fetchall()]
-
-
 def get_all_tags() -> list[tuple[str, int]]:
     """Повертає (tag_name, usage_count_in_mix_tags). Теги лишаються навіть якщо count=0."""
     with get_connection() as conn:
@@ -257,6 +318,49 @@ def get_all_tags() -> list[tuple[str, int]]:
             ORDER BY t.name
         """)
         return [(r[0], r[1]) for r in cursor.fetchall()]
+
+def delete_tags(tag_ids: list[int]) -> None:
+    if not tag_ids:
+        return
+
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        qmarks = ",".join(["?"] * len(tag_ids))
+
+        # спочатку прибираємо зв'язки
+        cursor.execute(f"DELETE FROM mix_tags WHERE tag_id IN ({qmarks})", tag_ids)
+
+        # потім самі теги
+        cursor.execute(f"DELETE FROM tags WHERE id IN ({qmarks})", tag_ids)
+
+        conn.commit()
+
+def get_schema_version(conn):
+    cur = conn.cursor()
+    cur.execute("CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL)")
+    cur.execute("SELECT version FROM schema_version LIMIT 1")
+    row = cur.fetchone()
+    if row is None:
+        cur.execute("INSERT INTO schema_version(version) VALUES (1)")
+        conn.commit()
+        return 1
+    return row[0]
+
+def set_schema_version(conn, v):
+    cur = conn.cursor()
+    cur.execute("UPDATE schema_version SET version = ?", (v,))
+    conn.commit()
+
+def normalize_tags(raw: str) -> list[str]:
+    tags_list = [t.strip().lower() for t in raw.split(",") if t.strip()]
+    # прибираємо дублікати, але зберігаємо порядок
+    seen = set()
+    result = []
+    for t in tags_list:
+        if t not in seen:
+            seen.add(t)
+            result.append(t)
+    return result
 
 def migrate_tags_from_column():
     """Одноразово переносить mixes.tags -> tags + mix_tags. Не шкодить, якщо запустити повторно."""
@@ -284,33 +388,6 @@ def get_all_tags_with_counts():
         """)
         return cursor.fetchall()
 
-def delete_tags(tag_ids: list[int]) -> None:
-    if not tag_ids:
-        return
-
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        qmarks = ",".join(["?"] * len(tag_ids))
-
-        # спочатку прибираємо зв'язки
-        cursor.execute(f"DELETE FROM mix_tags WHERE tag_id IN ({qmarks})", tag_ids)
-
-        # потім самі теги
-        cursor.execute(f"DELETE FROM tags WHERE id IN ({qmarks})", tag_ids)
-
-        conn.commit()
-
-def get_tracks_for_mix(mix_id):
-    with get_connection() as conn:
-        cur = conn.cursor()
-        cur.execute("""
-        SELECT id, artist, title, soundcloud, time
-        FROM mix_tracks
-        WHERE mix_id = ?
-        ORDER BY pos
-        """, (mix_id,))
-        return cur.fetchall()
-
 def get_mix_track_row(mix_track_id):
     with get_connection() as conn:
         cur = conn.cursor()
@@ -320,11 +397,6 @@ def get_mix_track_row(mix_track_id):
         WHERE id = ?
         """, (mix_track_id,))
         return cur.fetchone()
-
-def update_mix_track(mix_track_id: int, artist: str, title: str, soundcloud: str, time_value: str) -> bool:
-    title = (title or "").strip()
-    if not title:
-        return False
 
     with get_connection() as conn:
         cursor = conn.cursor()
@@ -357,28 +429,12 @@ def update_mix_tags(mix_id: int, tags: str):
         cur.execute("UPDATE mixes SET tags = ? WHERE id = ?", (tags, mix_id))
         conn.commit()
 
-def update_mix_links(mix_id: int, youtube: str, soundcloud: str) -> None:
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            UPDATE mixes
-            SET youtube = ?, soundcloud = ?
-            WHERE id = ?
-        """, (youtube.strip(), soundcloud.strip(), mix_id))
-        conn.commit()
-
 def get_mix_cover(mix_id):
     with get_connection() as conn:
         cur = conn.cursor()
         cur.execute("SELECT cover FROM mixes WHERE id=?", (mix_id,))
         row = cur.fetchone()
         return row[0] if row and row[0] else None
-
-def update_mix_cover(mix_id, cover_path):
-    with get_connection() as conn:
-        cur = conn.cursor()
-        cur.execute("UPDATE mixes SET cover=? WHERE id=?", (cover_path, mix_id))
-        conn.commit()
 
 def search_tracks(query):
     q = f"%{query.strip()}%"
@@ -408,68 +464,3 @@ def search_mixes(query):
             ORDER BY id DESC
         """, (q, q, q))
         return cur.fetchall()
-
-def delete_mix_track(mix_track_id):
-    with get_connection() as conn:
-        cur = conn.cursor()
-
-        # дізнаємось mix_id та pos видаленого треку
-        cur.execute("""
-        SELECT mix_id, pos FROM mix_tracks WHERE id=?
-        """, (mix_track_id,))
-        row = cur.fetchone()
-
-        if not row:
-            return False
-
-        mix_id, deleted_pos = row
-
-        # видаляємо сам трек
-        cur.execute("""
-        DELETE FROM mix_tracks WHERE id=?
-        """, (mix_track_id,))
-
-        # зсуваємо всі треки нижче на -1
-        cur.execute("""
-        UPDATE mix_tracks
-        SET pos = pos - 1
-        WHERE mix_id=? AND pos > ?
-        """, (mix_id, deleted_pos))
-
-        conn.commit()
-
-    return True
-
-def delete_mix(mix_id):
-    with get_connection() as conn:
-        cur = conn.cursor()
-
-        # 1️⃣ Дізнаємось шлях до обкладинки
-        cur.execute("SELECT cover FROM mixes WHERE id=?", (mix_id,))
-        row = cur.fetchone()
-
-        cover_path = row[0] if row and row[0] else None
-
-        # 2️⃣ Видаляємо треки
-        cur.execute("DELETE FROM mix_tracks WHERE mix_id=?", (mix_id,))
-
-        # 3️⃣ Видаляємо сам мікс
-        cur.execute("DELETE FROM mixes WHERE id=?", (mix_id,))
-
-        conn.commit()
-
-    # 4️⃣ Видаляємо файл обкладинки (після закриття з'єднання)
-    if cover_path:
-        full_path = os.path.join(os.getcwd(), cover_path)
-
-        if os.path.exists(full_path):
-            try:
-                os.remove(full_path)
-            except Exception:
-                pass  # якщо не вдалось — просто не падаємо
-
-    return True
-
-
-
-
