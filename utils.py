@@ -1,5 +1,6 @@
 import re
 from markupsafe import escape, Markup
+from typing import Optional
 import json
 import ast
 
@@ -39,7 +40,7 @@ def parse_tags_input(raw: str) -> list[str]:
             data = json.loads(s)
             if isinstance(data, list):
                 return [str(x).strip() for x in data if str(x).strip()]
-        except Exception:
+        except (json.JSONDecodeError, TypeError, ValueError):
             pass
 
         # пробуємо Python repr: ['a','b']
@@ -47,7 +48,7 @@ def parse_tags_input(raw: str) -> list[str]:
             data = ast.literal_eval(s)
             if isinstance(data, list):
                 return [str(x).strip() for x in data if str(x).strip()]
-        except Exception:
+        except (ValueError, SyntaxError):
             pass
 
         # якщо не вдалося — падатимемо до split нижче
@@ -91,3 +92,91 @@ def _normalize_time(t: str) -> str:
 def _strip_brackets_tail(s: str) -> str:
     """Відрізаємо хвіст типу [8m 21s] або [14m]"""
     return re.sub(r"\s*\[[^]]+]\s*$", "", s).strip()
+
+def parse_track_line(line: str) -> Optional[tuple[str, str, str, str]]:
+    """
+    Повертає (artist, title, soundcloud, time_value) або None якщо рядок треба пропустити.
+    Підтримує кілька форматів треклістів.
+    """
+
+    if not line:
+        return None
+
+    low = line.lower().strip()
+
+    # 0) пропускаємо службові рядки
+    if "://" in low:
+        return None
+    if low.startswith("disc "):
+        return None
+    if "tracklist" in low and low.endswith(":"):
+        return None
+
+    # прибираємо хвіст типу [8m 21s]
+    line = _strip_brackets_tail(line.strip())
+
+    artist = ""
+    title = ""
+    time_value = ""
+    soundcloud = ""  # поки не парсимо з тексту
+
+    # A) TIME - TITLE
+    # 0:04:50 - Lighthouse Suite
+    m = re.match(r"^(\d{1,2}:\d{2}:\d{2}|\d{1,2}:\d{2})\s*-\s*(.+)$", line)
+    if m:
+        time_value = _normalize_time(m.group(1))
+        title = m.group(2).strip()
+        return (artist, title, soundcloud, time_value)
+
+    # B) N. TITLE TIME
+    # 1. Sine Mora - High Score (Results) 0:00
+    m = re.match(r"^\d+\.\s*(.+?)\s+(\d{1,2}:\d{2}(?::\d{2})?)$", line)
+    if m:
+        title_part = m.group(1).strip()
+        time_value = _normalize_time(m.group(2))
+        if " - " in title_part:
+            artist, title = [p.strip() for p in title_part.split(" - ", 1)]
+        elif " — " in title_part:
+            artist, title = [p.strip() for p in title_part.split(" — ", 1)]
+        else:
+            title = title_part
+        if title:
+            return (artist, title, soundcloud, time_value)
+        return None
+
+    # C) N. TITLE
+    # 1. Aural Imbalance - Realm of Innocence (1999)
+    m = re.match(r"^\d+\.\s*(.+)$", line)
+    if m:
+        title_part = m.group(1).strip()
+        if " - " in title_part:
+            artist, title = [p.strip() for p in title_part.split(" - ", 1)]
+        elif " — " in title_part:
+            artist, title = [p.strip() for p in title_part.split(" — ", 1)]
+        else:
+            title = title_part
+        if title:
+            return (artist, title, soundcloud, time_value)
+        return None
+
+    # D) TIME Artist - Title (без дефісу між часом і рештою)
+    # 00:00 Kudos - Horizontal Movements
+    m = re.match(r"^(\d{1,2}:\d{2}(?::\d{2})?)\s+(.+)$", line)
+    if m:
+        time_value = _normalize_time(m.group(1))
+        rest = m.group(2).strip()
+        if " - " in rest:
+            artist, title = [p.strip() for p in rest.split(" - ", 1)]
+        elif " — " in rest:
+            artist, title = [p.strip() for p in rest.split(" — ", 1)]
+        else:
+            title = rest
+        if title:
+            return (artist, title, soundcloud, time_value)
+        return None
+
+    # E) Просто текст
+    title = line.strip()
+    if not title:
+        return None
+    return (artist, title, soundcloud, time_value)

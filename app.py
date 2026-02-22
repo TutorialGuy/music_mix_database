@@ -6,14 +6,13 @@ from database import (
     get_mix_cover, update_mix_cover, update_mix_links,
     delete_mix_track, delete_mix,
     search_tracks, search_mixes,
-    get_all_tags, set_mix_tags, get_mix_tags, update_mix_tags,
+    set_mix_tags, get_mix_tags, update_mix_tags,
     get_all_tags_with_counts, delete_tags
 )
-from utils import (slugify, highlight, _normalize_time, _strip_brackets_tail)
+from utils import (slugify, highlight, parse_track_line)
 import os
 from werkzeug.utils import secure_filename
 from PIL import Image
-import re
 
 
 app = Flask(__name__)
@@ -77,7 +76,6 @@ def mixes_page():
 
 
 @app.route("/add-mix", methods=["GET", "POST"])
-
 def add_mix_page():
     error_msg = ""
     if request.method == "GET" and request.args.get("err") == "too_large":
@@ -91,7 +89,6 @@ def add_mix_page():
         title_value = request.form.get("title", "")
         youtube_value = request.form.get("youtube", "")
         soundcloud_value = request.form.get("soundcloud", "")
-        tags_value = request.form.get("tags", "")
         # нормалізація тегів (comma-style)
         raw_tags = request.form.get("tags", "")
         tags_list = [t.strip().lower() for t in raw_tags.split(",") if t.strip()]
@@ -257,141 +254,19 @@ def import_tracks(mix_id):
 
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
 
+    added = 0
     for line in lines:
-        # ---- 0) пропускаємо службові рядки ----
-        low = line.lower()
-        if "://" in low:
-            continue
-        if low.startswith("disc "):
-            continue
-        if "tracklist" in low and low.endswith(":"):
+        parsed = parse_track_line(line)
+        if not parsed:
             continue
 
-        # прибираємо хвіст [..] якщо є
-        line = _strip_brackets_tail(line)
-
-        artist = ""
-        title = ""
-        time_value = ""
-        soundcloud = ""
-
-        # ---- 1) Формат A: TIME - TITLE ----
-        # 0:04:50 - Lighthouse Suite
-        m = re.match(r"^(\d{1,2}:\d{2}:\d{2}|\d{1,2}:\d{2})\s*-\s*(.+)$", line)
-        if m:
-            time_value = _normalize_time(m.group(1))
-            title = m.group(2).strip()
-
-        else:
-            # ---- 2) Формат B: N. TITLE TIME ----
-            # 1. Sine Mora - High Score (Results) 0:00
-            m = re.match(r"^\d+\.\s*(.+?)\s+(\d{1,2}:\d{2}(?::\d{2})?)$", line)
-            if m:
-                title_part = m.group(1).strip()
-                time_value = _normalize_time(m.group(2))
-                # title_part може бути "Artist - Title"
-                if " - " in title_part:
-                    artist, title = [p.strip() for p in title_part.split(" - ", 1)]
-                elif " — " in title_part:
-                    artist, title = [p.strip() for p in title_part.split(" — ", 1)]
-                else:
-                    title = title_part
-            else:
-                # ---- 3) Формат C: N. TITLE ----
-                # 1. Aural Imbalance - Realm of Innocence (1999)
-                m = re.match(r"^\d+\.\s*(.+)$", line)
-                if m:
-                    title_part = m.group(1).strip()
-                    if " - " in title_part:
-                        artist, title = [p.strip() for p in title_part.split(" - ", 1)]
-                    elif " — " in title_part:
-                        artist, title = [p.strip() for p in title_part.split(" — ", 1)]
-                    else:
-                        title = title_part
-                else:
-                    # ---- 4) Формат D: TIME Artist - Title (без дефісу між часом і рештою) ----
-                    # 00:00 Kudos - Horizontal Movements
-                    m = re.match(r"^(\d{1,2}:\d{2}(?::\d{2})?)\s+(.+)$", line)
-                    if m:
-                        time_value = _normalize_time(m.group(1))
-                        rest = m.group(2).strip()
-                        if " - " in rest:
-                            artist, title = [p.strip() for p in rest.split(" - ", 1)]
-                        elif " — " in rest:
-                            artist, title = [p.strip() for p in rest.split(" — ", 1)]
-                        else:
-                            title = rest
-                    else:
-                        # ---- 5) Просто текст ----
-                        title = line.strip()
-
-        # мінімальна валідація
-        title = title.strip()
-        artist = artist.strip()
-        soundcloud = soundcloud.strip()
-        time_value = time_value.strip()
-
-        if not title:
-            continue
+        artist, title, soundcloud, time_value = parsed
 
         ok = add_track_to_mix(mix_id, artist, title, soundcloud, time_value)
+        if ok:
+            added += 1
 
     return redirect(f"/mix/{mix_id}")
-
-@app.route("/edit-track/<int:mix_track_id>", methods=["GET", "POST"])
-def edit_track(mix_track_id):
-    row = get_mix_track_row(mix_track_id)
-    if not row:
-        return "<h2>Запис не знайдено</h2><p><a href='/mixes'>Назад</a></p>"
-
-    mix_track_id, mix_id, artist, title, soundcloud, time_value, pos = row
-
-    error_msg = ""
-
-    # Значення для форми (GET)
-    form_artist = artist or ""
-    form_title = title or ""
-    form_soundcloud = soundcloud or ""
-    form_time = time_value or ""
-
-    if request.method == "POST":
-        # Значення для форми (POST)
-        form_artist = request.form.get("artist", "")
-        form_title = request.form.get("title", "")
-        form_soundcloud = request.form.get("soundcloud", "")
-        form_time = request.form.get("time", "")
-
-        ok = update_mix_track(mix_track_id, form_artist, form_title, form_soundcloud, form_time)
-        if ok:
-            return redirect(f"/mix/{mix_id}")
-        error_msg = "❌ Назва треку обов'язкова."
-
-    html = "<h2>Редагувати трек у цьому міксі</h2>"
-    html += f'<p><a href="/mix/{mix_id}">Назад до міксу</a> | <a href="/">На головну</a></p>'
-
-    if error_msg:
-        html += f'<p style="color:red;"><b>{error_msg}</b></p>'
-
-    html += f"""
-    <form method="post">
-        <p>Артист (не обов'язково):<br>
-           <input name="artist" value="{form_artist}" style="width:300px"></p>
-
-        <p>Назва треку (обов'язково):<br>
-           <input name="title" value="{form_title}" style="width:300px"></p>
-
-        <p>SoundCloud (не обов'язково):<br>
-           <input name="soundcloud" value="{form_soundcloud}" style="width:400px"></p>
-
-        <p>Час у міксі (не обов'язково):<br>
-           <input name="time" value="{form_time}" placeholder="00:00:00" style="width:150px"></p>
-
-        <button type="submit">Зберегти</button>
-    </form>
-    """
-
-    html += f'<p><a href="/mix/{mix_id}">Назад до міксу</a> | <a href="/">На головну</a></p>'
-    return html
 
 @app.route("/mix/<int:mix_id>/update-track/<int:mix_track_id>", methods=["POST"])
 def update_track_inline(mix_id, mix_track_id):
