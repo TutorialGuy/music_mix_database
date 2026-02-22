@@ -5,13 +5,15 @@ DB_NAME = "music.db"
 
 
 def get_connection():
-    return sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME)
     conn.execute("PRAGMA foreign_keys = ON;")
+    return conn
 
 def init_db():
     with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
+        cur = conn.cursor()
+
+        cur.execute("""
         CREATE TABLE IF NOT EXISTS mixes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
@@ -21,12 +23,7 @@ def init_db():
         )
         """)
 
-        try:
-            cursor.execute("ALTER TABLE mixes ADD COLUMN cover TEXT")
-        except sqlite3.OperationalError:
-            pass
-
-        cursor.execute("""
+        cur.execute("""
         CREATE TABLE IF NOT EXISTS tracks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             artist TEXT,
@@ -36,28 +33,27 @@ def init_db():
         )
         """)
 
-        cursor.execute("""
+        cur.execute("""
         CREATE TABLE IF NOT EXISTS mix_tracks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             mix_id INTEGER NOT NULL,
-            track_id INTEGER,
             artist TEXT,
             title TEXT NOT NULL,
             soundcloud TEXT,
             time TEXT,
             pos INTEGER NOT NULL,
-            FOREIGN KEY (mix_id) REFERENCES mixes(id)
+            FOREIGN KEY (mix_id) REFERENCES mixes(id) ON DELETE CASCADE
         )
         """)
 
-        cursor.execute("""
+        cur.execute("""
         CREATE TABLE IF NOT EXISTS tags (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE
         )
         """)
 
-        cursor.execute("""
+        cur.execute("""
         CREATE TABLE IF NOT EXISTS mix_tags (
             mix_id INTEGER NOT NULL,
             tag_id INTEGER NOT NULL,
@@ -67,25 +63,7 @@ def init_db():
         )
         """)
 
-        try:
-            cursor.execute("ALTER TABLE mix_tracks ADD COLUMN pos INTEGER")
-        except sqlite3.OperationalError:
-            pass
         conn.commit()
-    with get_connection() as conn:
-        v = get_schema_version(conn)
-
-        # приклад майбутніх кроків:
-        # if v < 2:
-        #     cur = conn.cursor()
-        #     cur.execute("ALTER TABLE mixes ADD COLUMN tags TEXT")
-        #     set_schema_version(conn, 2)
-    # Додаємо поле tags у mixes (якщо його ще немає)
-    try:
-        cursor.execute("ALTER TABLE mixes ADD COLUMN tags TEXT")
-    except sqlite3.OperationalError:
-        pass
-    migrate_tags_from_column()
 
 #MIXES#
 def add_mix(title, youtube, soundcloud, cover_path, tags):
@@ -134,8 +112,8 @@ def delete_mix(mix_id):
         if os.path.exists(full_path):
             try:
                 os.remove(full_path)
-            except Exception:
-                pass  # якщо не вдалось — просто не падаємо
+            except OSError:
+                pass
 
     return True
 
@@ -156,63 +134,30 @@ def update_mix_cover(mix_id, cover_path):
         conn.commit()
 
 #TRACKS#
-def add_track_to_mix(mix_id, artist, title, soundcloud, time_value):
-    artist = (artist or "").strip()
+def add_track_to_mix(mix_id: int, artist: str, title: str, soundcloud: str, time_value: str) -> bool:
     title = (title or "").strip()
-    soundcloud = (soundcloud or "").strip()
-    time_value = (time_value or "").strip()
-
-    # Назва треку обов'язкова
     if not title:
         return False
 
-    artist_db = artist if artist else None
-    soundcloud_db = soundcloud if soundcloud else None
-    time_db = time_value if time_value else None
+    artist_db = artist.strip() if artist else None
+    soundcloud_db = soundcloud.strip() if soundcloud else None
+    time_db = time_value.strip() if time_value else None
 
     with get_connection() as conn:
         cur = conn.cursor()
 
-        # позиція = остання + 1
-        cur.execute(
-            "SELECT COALESCE(MAX(pos), 0) + 1 FROM mix_tracks WHERE mix_id=?",
-            (mix_id,)
-        )
-        next_pos = cur.fetchone()[0]
+        # позиція в кінці списку
+        cur.execute("SELECT COALESCE(MAX(pos), 0) + 1 FROM mix_tracks WHERE mix_id=?", (mix_id,))
+        pos = cur.fetchone()[0]
 
-        # додаємо рядок у mix_tracks (УСІ ДАНІ ТУТ)
-        cur.execute(
-            """
+        cur.execute("""
             INSERT INTO mix_tracks (mix_id, artist, title, soundcloud, time, pos)
             VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (mix_id, artist_db, title, soundcloud_db, time_db, next_pos)
-        )
+        """, (mix_id, artist_db, title, soundcloud_db, time_db, pos))
 
         conn.commit()
 
     return True
-
-    with get_connection() as conn:
-        cur = conn.cursor()
-
-        # 1) Вставляємо трек або отримуємо існуючий
-        cur.execute(
-            "INSERT OR IGNORE INTO tracks (artist, title) VALUES (?, ?)",
-            (artist, title)
-        )
-        cur.execute(
-            "SELECT id FROM tracks WHERE artist=? AND title=?",
-            (artist, title)
-        )
-        track_id = cur.fetchone()[0]
-
-        # 2) Прив'язуємо трек до міксу
-        cur.execute(
-            "INSERT OR IGNORE INTO mix_tracks (mix_id, track_id) VALUES (?, ?)",
-            (mix_id, track_id)
-        )
-        conn.commit()
 
 def get_tracks_for_mix(mix_id):
     with get_connection() as conn:
@@ -230,35 +175,26 @@ def update_mix_track(mix_track_id: int, artist: str, title: str, soundcloud: str
     if not title:
         return False
 
-def delete_mix_track(mix_track_id):
+    artist_db = artist.strip() if artist else None
+    soundcloud_db = soundcloud.strip() if soundcloud else None
+    time_db = time_value.strip() if time_value else None
+
     with get_connection() as conn:
         cur = conn.cursor()
-
-        # дізнаємось mix_id та pos видаленого треку
         cur.execute("""
-        SELECT mix_id, pos FROM mix_tracks WHERE id=?
-        """, (mix_track_id,))
-        row = cur.fetchone()
-
-        if not row:
-            return False
-
-        mix_id, deleted_pos = row
-
-        # видаляємо сам трек
-        cur.execute("""
-        DELETE FROM mix_tracks WHERE id=?
-        """, (mix_track_id,))
-
-        # зсуваємо всі треки нижче на -1
-        cur.execute("""
-        UPDATE mix_tracks
-        SET pos = pos - 1
-        WHERE mix_id=? AND pos > ?
-        """, (mix_id, deleted_pos))
-
+            UPDATE mix_tracks
+            SET artist=?, title=?, soundcloud=?, time=?
+            WHERE id=?
+        """, (artist_db, title, soundcloud_db, time_db, mix_track_id))
         conn.commit()
 
+    return True
+
+def delete_mix_track(mix_track_id: int) -> bool:
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM mix_tracks WHERE id = ?", (mix_track_id,))
+        conn.commit()
     return True
 
 #TAGS#
@@ -296,7 +232,6 @@ def set_mix_tags(mix_id: int, tags) -> None:
 
         # 3) додаємо теги і зв’язки
         for name in tags_list:
-            cur.execute("INSERT OR IGNORE INTO tags(name) VALUES(?)", (name,))
             cur.execute("SELECT id FROM tags WHERE name = ?", (name,))
             tag_id = cur.fetchone()[0]
             cur.execute(
@@ -305,19 +240,6 @@ def set_mix_tags(mix_id: int, tags) -> None:
             )
 
         conn.commit()
-
-def get_all_tags() -> list[tuple[str, int]]:
-    """Повертає (tag_name, usage_count_in_mix_tags). Теги лишаються навіть якщо count=0."""
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT t.name, COUNT(mt.mix_id) as cnt
-            FROM tags t
-            LEFT JOIN mix_tags mt ON mt.tag_id = t.id
-            GROUP BY t.id
-            ORDER BY t.name
-        """)
-        return [(r[0], r[1]) for r in cursor.fetchall()]
 
 def delete_tags(tag_ids: list[int]) -> None:
     if not tag_ids:
@@ -388,40 +310,15 @@ def get_all_tags_with_counts():
         """)
         return cursor.fetchall()
 
-def get_mix_track_row(mix_track_id):
+def get_mix_track_row(mix_track_id: int):
     with get_connection() as conn:
         cur = conn.cursor()
         cur.execute("""
-        SELECT id, mix_id, artist, title, soundcloud, time, pos
-        FROM mix_tracks
-        WHERE id = ?
+            SELECT id, mix_id, artist, title, soundcloud, time, pos
+            FROM mix_tracks
+            WHERE id = ?
         """, (mix_track_id,))
         return cur.fetchone()
-
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            UPDATE mix_tracks
-            SET artist = ?, title = ?, soundcloud = ?, time = ?
-            WHERE id = ?
-        """, (artist.strip(), title, soundcloud.strip(), time_value.strip(), mix_track_id))
-        conn.commit()
-    return True
-
-    artist_db = artist if artist else None
-    soundcloud_db = soundcloud if soundcloud else None
-    time_db = time_value if time_value else None
-
-    with get_connection() as conn:
-        cur = conn.cursor()
-        cur.execute("""
-        UPDATE mix_tracks
-        SET artist=?, title=?, soundcloud=?, time=?
-        WHERE id=?
-        """, (artist_db, title, soundcloud_db, time_db, mix_track_id))
-        conn.commit()
-
-    return True
 
 def update_mix_tags(mix_id: int, tags: str):
     with get_connection() as conn:
