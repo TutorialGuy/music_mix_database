@@ -200,29 +200,37 @@ def normalize_tags(raw: str) -> list[str]:
     return result
 
 
-def set_mix_tags(mix_id: int, tags_list: list[str]) -> None:
+def set_mix_tags(mix_id: int, tags) -> None:
+    """
+    Перезаписує теги міксу.
+    Приймає або list[str], або рядок "tag1, tag2, tag3".
+    """
+    # 1) нормалізуємо в list[str]
+    if tags is None:
+        tags_list = []
+    elif isinstance(tags, str):
+        tags_list = [t.strip().lower() for t in tags.split(",") if t.strip()]
+    else:
+        # очікуємо list/tuple/set
+        tags_list = [str(t).strip().lower() for t in tags if str(t).strip()]
+
     with get_connection() as conn:
-        cursor = conn.cursor()
+        cur = conn.cursor()
 
-        # прибираємо старі зв'язки
-        cursor.execute("DELETE FROM mix_tags WHERE mix_id = ?", (mix_id,))
+        # 2) чистимо зв’язки для цього міксу
+        cur.execute("DELETE FROM mix_tags WHERE mix_id = ?", (mix_id,))
 
-        for tag in tags_list:
-            name = tag.strip().lower()
-            if not name:
-                continue
-
-            cursor.execute("INSERT OR IGNORE INTO tags(name) VALUES(?)", (name,))
-            cursor.execute("SELECT id FROM tags WHERE name = ?", (name,))
-            tag_id = cursor.fetchone()[0]
-
-            cursor.execute(
+        # 3) додаємо теги і зв’язки
+        for name in tags_list:
+            cur.execute("INSERT OR IGNORE INTO tags(name) VALUES(?)", (name,))
+            cur.execute("SELECT id FROM tags WHERE name = ?", (name,))
+            tag_id = cur.fetchone()[0]
+            cur.execute(
                 "INSERT OR IGNORE INTO mix_tags(mix_id, tag_id) VALUES(?, ?)",
-                (mix_id, tag_id)
+                (mix_id, tag_id),
             )
 
         conn.commit()
-
 
 def get_mix_tags(mix_id: int) -> list[str]:
     with get_connection() as conn:
@@ -261,6 +269,34 @@ def migrate_tags_from_column():
 
         for mix_id, raw in rows:
             set_mix_tags(mix_id, raw)
+
+        conn.commit()
+
+def get_all_tags_with_counts():
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT t.id, t.name, COUNT(mt.mix_id) as cnt
+            FROM tags t
+            LEFT JOIN mix_tags mt ON mt.tag_id = t.id
+            GROUP BY t.id, t.name
+            ORDER BY t.name
+        """)
+        return cursor.fetchall()
+
+def delete_tags(tag_ids: list[int]) -> None:
+    if not tag_ids:
+        return
+
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        qmarks = ",".join(["?"] * len(tag_ids))
+
+        # спочатку прибираємо зв'язки
+        cursor.execute(f"DELETE FROM mix_tags WHERE tag_id IN ({qmarks})", tag_ids)
+
+        # потім самі теги
+        cursor.execute(f"DELETE FROM tags WHERE id IN ({qmarks})", tag_ids)
 
         conn.commit()
 
@@ -433,6 +469,7 @@ def delete_mix(mix_id):
                 pass  # якщо не вдалось — просто не падаємо
 
     return True
+
 
 
 

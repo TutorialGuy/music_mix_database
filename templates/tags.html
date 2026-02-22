@@ -2,22 +2,51 @@
 {% block title %}Теги{% endblock %}
 
 {% block content %}
-<h2>Усі теги</h2>
+<h2>🏷️ Теги</h2>
 
 <p>
   <a href="/" style="margin-right:12px;">🏠 На головну</a>
-  <a href="/mixes">🎧 Список міксів</a>
+  <a href="/mixes">📚 Список міксів</a>
 </p>
 
-{% if not tags %}
-  <p>Поки що немає тегів.</p>
-{% else %}
+<button id="toggleDelete" type="button">🗑️ Видалити теги</button>
+
+<form id="deleteForm" method="post" action="/tags/delete" style="margin-top:12px; display:none;"
+      onsubmit="return confirm('Ви впевнені, що бажаєте видалити вибрані теги? Вони також зникнуть з усіх міксів.');">
+  <button type="submit" style="margin-bottom:12px;">✅ Підтвердити видалення вибраних</button>
+
   <div>
-    {% for name, cnt in tags %}
-      <a href="/?q={{ name }}" class="tag">{{ name }}</a>
-      <small style="color:gray;">({{ cnt }})</small>
+    {% for t in tags %}
+      <div style="margin:6px 0;">
+        <label>
+          <input type="checkbox" name="tag_id" value="{{ t.id }}">
+          <b>{{ t.name }}</b>
+          <span style="color:gray;">(використано: {{ t.cnt }})</span>
+        </label>
+      </div>
     {% endfor %}
   </div>
-{% endif %}
+</form>
+
+<!-- звичайний список тегів (коли не в режимі видалення) -->
+<div id="normalList" style="margin-top:14px;">
+  {% for t in tags %}
+    <span class="tag">{{ t.name }}</span>
+  {% endfor %}
+</div>
+
+<script>
+  const btn = document.getElementById("toggleDelete");
+  const form = document.getElementById("deleteForm");
+  const normal = document.getElementById("normalList");
+  let active = false;
+
+  btn.addEventListener("click", () => {
+    active = !active;
+    form.style.display = active ? "block" : "none";
+    normal.style.display = active ? "none" : "block";
+    btn.textContent = active ? "↩️ Скасувати видалення" : "🗑️ Видалити теги";
+  });
+</script>
 
 {% endblock %}

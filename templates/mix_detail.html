@@ -63,14 +63,16 @@
         {% if tags %}
             <p>
                 {% for tag in tags %}
-                    <span class="tag">{{ tag.strip() }}</span>
+                  <span class="tag">{{ tag }}</span>
                 {% endfor %}
             </p>
         {% endif %}
 
         <form method="post" action="/mix/{{ mix_id }}/update-tags" style="margin-top:8px;">
-            <input name="tags" value="{{ tags }}" style="width:400px"
-                   placeholder="drum and bass, liquid dnb">
+            <input name="tags"
+         value="{{ tags_input or '' }}"
+         placeholder="drum and bass, liquid dnb"
+         style="width:100%;">
             <button type="submit" style="margin-left:8px;">Зберегти теги</button>
         </form>
 

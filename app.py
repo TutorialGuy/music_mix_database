@@ -6,7 +6,8 @@ from database import (
     get_mix_cover, update_mix_cover, update_mix_links,
     delete_mix_track, delete_mix,
     search_tracks, search_mixes,
-    get_all_tags, set_mix_tags, get_mix_tags, update_mix_tags
+    get_all_tags, set_mix_tags, get_mix_tags, update_mix_tags,
+    get_all_tags_with_counts, delete_tags
 )
 import os
 from werkzeug.utils import secure_filename
@@ -265,7 +266,10 @@ def mix_detail(mix_id):
     tracks_raw = get_tracks_for_mix(mix_id)
 
     # розпаковка міксу
-    mix_id_db, mix_title, youtube, sc_mix, cover, tags = mix
+    mix_id_db, mix_title, youtube, sc_mix, cover, _tags_cache = mix
+
+    tags_list = get_mix_tags(mix_id_db)  # тільки список
+    tags_input = ", ".join(tags_list)  # рядок для input
 
     # підготуємо треки для шаблону як dict-об’єкти
     tracks = []
@@ -278,7 +282,6 @@ def mix_detail(mix_id):
             "time_value": time_value
         })
 
-    sorted_tags = get_mix_tags(mix_id)
     return render_template(
         "mix_detail.html",
         mix_id=mix_id_db,
@@ -289,13 +292,30 @@ def mix_detail(mix_id):
         cover_error_msg=cover_error_msg,
         track_error_msg=track_error_msg,
         tracks=tracks,
-        tags=sorted_tags
+        tags=tags_list,          # для плашок
+        tags_input=tags_input  # для <input value="...">
     )
 
-@app.route("/tags")
+@app.route("/tags", methods=["GET"])
 def tags_page():
-    tags = get_all_tags()
+    rows = get_all_tags_with_counts()
+    tags = [{"id": r[0], "name": r[1], "cnt": r[2]} for r in rows]
     return render_template("tags.html", tags=tags)
+
+@app.route("/tags/delete", methods=["POST"])
+def delete_tags_page():
+    raw_ids = request.form.getlist("tag_id")
+    tag_ids = []
+    for x in raw_ids:
+        try:
+            tag_ids.append(int(x))
+        except ValueError:
+            pass
+
+    if tag_ids:
+        delete_tags(tag_ids)
+
+    return redirect("/tags")
 
 def _normalize_time(t: str) -> str:
     """Приводимо 0:00 / 12:34 / 1:02:03 до HH:MM:SS"""
@@ -542,16 +562,21 @@ def update_tags(mix_id):
     if not mix:
         return redirect("/mixes")
 
-    raw_tags = request.form.get("tags", "")
+    raw_tags = request.form.get("tags", "").strip()
 
-    # нормалізація Philomena-style
-    tags_list = [t.strip().lower() for t in raw_tags.split(",") if t.strip()]
+    # ✅ захист від випадків коли в поле потрапили [] або ['tag'] (щоб не плодити сміття)
+    if raw_tags in ("[]", ""):
+        tags_list = []
+    else:
+        # якщо раптом залишилось щось типу "['rally house']" — прибираємо дужки по краях
+        raw_tags = raw_tags.strip().strip("[]")
+        raw_tags = raw_tags.replace("'", "").replace('"', "")
+        tags_list = [t.strip().lower() for t in raw_tags.split(",") if t.strip()]
+
     tags_value = ", ".join(tags_list)
 
-    set_mix_tags(mix_id, tags_list)
-    # (за бажанням залишимо також mixes.tags як “кеш”, але не обов’язково)
-    update_mix_tags(mix_id, tags_value)
-
+    set_mix_tags(mix_id, tags_list)  # ✅ якщо set_mix_tags очікує список
+    update_mix_tags(mix_id, tags_value)  # ✅ кеш-рядок
     return redirect(f"/mix/{mix_id}")
 
 @app.route("/mix/<int:mix_id>/update-links", methods=["POST"])
