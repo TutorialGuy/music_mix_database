@@ -87,8 +87,8 @@
 
         {% if cover %}
             <div style="margin-bottom:10px;">
-                <img src="/{{ cover }}" alt="cover"
-                     style="width:260px; height:260px; object-fit:cover; border:1px solid #ccc; border-radius:10px;">
+                <img src="{{ url_for('static', filename=cover) }}" alt="cover"
+                    style="width:260px; height:260px; object-fit:cover; border:1px solid #ccc; border-radius:10px;">
             </div>
         {% endif %}
 

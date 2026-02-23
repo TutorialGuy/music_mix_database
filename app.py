@@ -141,7 +141,7 @@ def add_mix_page():
                     save_to = os.path.join(COVERS_FOLDER, unique_name)
                     file.save(save_to)
 
-                    cover_path = f"static/covers/{unique_name}"
+                    cover_path = f"covers/{unique_name}"
 
             # 3) Додаємо мікс тільки якщо немає помилок (включно з картинкою)
             if not error_msg:
@@ -326,7 +326,7 @@ def update_cover(mix_id):
     save_to = os.path.join(COVERS_FOLDER, new_name)
     file.save(save_to)
 
-    new_cover_path = f"static/covers/{new_name}"
+    new_cover_path = f"covers/{new_name}"
 
     # 5) оновлюємо БД + видаляємо старий файл
     old_cover = get_mix_cover(mix_id)

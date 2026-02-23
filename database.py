@@ -107,7 +107,7 @@ def delete_mix(mix_id):
 
     # 4️⃣ Видаляємо файл обкладинки (після закриття з'єднання)
     if cover_path:
-        full_path = os.path.join(os.getcwd(), cover_path)
+        full_path = os.path.join(os.getcwd(), "static", cover_path)
 
         if os.path.exists(full_path):
             try:
