@@ -107,7 +107,12 @@ def delete_mix(mix_id):
 
     # 4️⃣ Видаляємо файл обкладинки (після закриття з'єднання)
     if cover_path:
-        full_path = os.path.join(os.getcwd(), "static", cover_path)
+        # Нормалізуємо слеші
+        cover_path = cover_path.replace("\\", "/")
+
+        # якщо в БД зберігається "covers/xxx.jpg" — шлях відносно кореня проєкту
+        # якщо раптом залишилось "static/covers/xxx.jpg" — теж працюватиме
+        full_path = os.path.join(os.getcwd(), cover_path)
 
         if os.path.exists(full_path):
             try:

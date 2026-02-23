@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, render_template
+from flask import Flask, request, redirect, render_template, send_from_directory
 from database import (
     init_db, add_mix, get_all_mixes, get_mix_by_id,
     add_track_to_mix, get_tracks_for_mix,
@@ -20,8 +20,10 @@ app = Flask(__name__)
 # Має бути перевірка на 3 MB, але треба пропустити хоч щось, щоб зберегти поля
 app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024
 
-# Тека для збереження обкладинок (краще синхронізувати через хмару разом з БД)
-COVERS_FOLDER = os.path.join(app.root_path, "static", "covers")
+# Тека для збереження обкладинок
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+COVERS_FOLDER = os.path.join(BASE_DIR, "covers")
 os.makedirs(COVERS_FOLDER, exist_ok=True)
 
 ALLOWED_EXT = {"jpg", "jpeg", "png", "bmp", "webp", "gif"}
@@ -220,6 +222,10 @@ def mix_detail(mix_id):
         tags=tags_list,          # для плашок
         tags_input=tags_input  # для <input value="...">
     )
+
+@app.route("/covers/<path:filename>")
+def covers_file(filename):
+    return send_from_directory(COVERS_FOLDER, filename)
 
 @app.route("/tags", methods=["GET"])
 def tags_page():

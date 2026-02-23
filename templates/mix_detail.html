@@ -87,7 +87,7 @@
 
         {% if cover %}
             <div style="margin-bottom:10px;">
-                <img src="{{ url_for('static', filename=cover) }}" alt="cover"
+                <img src="/{{ cover }}" alt="cover"
                     style="width:260px; height:260px; object-fit:cover; border:1px solid #ccc; border-radius:10px;">
             </div>
         {% endif %}
@@ -98,13 +98,20 @@
             <p style="color:red;"><b>{{ cover_error_msg }}</b></p>
         {% endif %}
 
-        <form method="post" action="/mix/{{ mix_id }}/update-cover" enctype="multipart/form-data">
-            <input type="file" name="cover" accept="image/*"><br>
-            <small style="display:block;color:gray;margin-top:4px;">
-                Формати: JPG/JPEG, PNG, BMP, WEBP, GIF<br>
-                Макс: 3MB • До 3000×3000
-            </small>
-            <button type="submit" style="margin-top:8px;">Оновити</button>
+        <form method="post" action="/mix/{{ mix_id }}/update-cover" enctype="multipart/form-data" id="coverForm">
+
+          <div id="dropzone" class="dropzone">
+            <div class="dropzone-title">Перетягни обкладинку сюди</div>
+            <div class="dropzone-hint">або натисни, щоб вибрати файл</div>
+
+            <input type="file" name="cover" accept="image/*" id="coverInput" class="dropzone-input">
+          </div>
+
+          <small class="help">
+            Формати: JPG/JPEG, PNG, BMP, WEBP, GIF • Макс: 3MB • До 3000×3000
+          </small>
+
+          <button type="submit" style="margin-top:8px;">Оновити</button>
         </form>
 
         <hr style="margin:15px 0;">
@@ -189,5 +196,33 @@
   <a href="/" style="margin-right:12px;">🏠 На головну</a>
   <a href="/mixes">⬅️ Назад до списку міксів</a>
 </p>
+
+<script>
+  (function(){
+    const dz = document.getElementById("dropzone");
+    const input = document.getElementById("coverInput");
+    if(!dz || !input) return;
+
+    dz.addEventListener("click", () => input.click());
+
+    dz.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dz.classList.add("dragover");
+    });
+
+    dz.addEventListener("dragleave", () => {
+      dz.classList.remove("dragover");
+    });
+
+    dz.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dz.classList.remove("dragover");
+      if(e.dataTransfer.files && e.dataTransfer.files.length > 0){
+        input.files = e.dataTransfer.files;
+        document.getElementById("coverForm").submit();
+      }
+    });
+  })();
+</script>
 
 {% endblock %}

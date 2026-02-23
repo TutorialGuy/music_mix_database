@@ -103,4 +103,42 @@ mark {
     color:#e3e3e3;
 }
 
+.dropzone{
+  border: 2px dashed #555;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  background: rgba(255,255,255,0.03);
+}
 
+.dropzone:hover{
+  border-color: #777;
+}
+
+.dropzone.dragover{
+  border-color: #caa600;
+  background: rgba(255,255,0,0.06);
+}
+
+.dropzone-input{
+  display: block;
+  margin: 12px auto 0;
+  max-width: 100%;
+}
+
+.dropzone-title{
+  font-weight: 700;
+}
+
+.dropzone-hint{
+  color: #aaa;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+
+.help{
+  display:block;
+  color: #888;
+  margin-top: 6px;
+}
