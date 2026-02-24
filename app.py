@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, render_template, send_from_directory
+from flask import Flask, request, redirect, render_template, send_from_directory, jsonify
 from database import (
     init_db, add_mix, get_all_mixes, get_mix_by_id,
     add_track_to_mix, get_tracks_for_mix,
@@ -7,7 +7,8 @@ from database import (
     delete_mix_track, delete_mix,
     search_tracks, search_mixes,
     set_mix_tags, get_mix_tags, update_mix_tags,
-    get_all_tags_with_counts, delete_tags
+    get_all_tags_with_counts, delete_tags,
+    delete_mix_tracks_bulk, set_tracks_order
 )
 from utils import (slugify, highlight, parse_track_line)
 import os
@@ -274,6 +275,16 @@ def import_tracks(mix_id):
 
     return redirect(f"/mix/{mix_id}")
 
+@app.route("/mix/<int:mix_id>/delete-tracks", methods=["POST"])
+def delete_tracks_bulk(mix_id):
+    data = request.get_json(silent=True) or {}
+    ids = data.get("ids", [])
+    if not isinstance(ids, list):
+        return jsonify({"ok": False}), 400
+
+    ok = delete_mix_tracks_bulk(mix_id, ids)
+    return jsonify({"ok": ok})
+
 @app.route("/mix/<int:mix_id>/update-track/<int:mix_track_id>", methods=["POST"])
 def update_track_inline(mix_id, mix_track_id):
     artist = request.form.get("artist", "")
@@ -283,10 +294,9 @@ def update_track_inline(mix_id, mix_track_id):
 
     ok = update_mix_track(mix_track_id, artist, title, soundcloud, time_value)
     if not ok:
-        return redirect(f"/mix/{mix_id}?err=track_title_required")
+        return jsonify({"ok": False, "error": "track_title_required"}), 400
 
-    return redirect(f"/mix/{mix_id}")
-
+    return jsonify({"ok": True}), 200
 
 @app.route("/mix/<int:mix_id>/update-cover", methods=["POST"])
 def update_cover(mix_id):
@@ -395,6 +405,20 @@ def delete_track(mix_track_id):
 def delete_mix_page(mix_id):
     delete_mix(mix_id)
     return redirect("/mixes")
+
+from flask import jsonify
+
+@app.route("/mix/<int:mix_id>/reorder-tracks", methods=["POST"])
+def reorder_tracks(mix_id):
+    ids = request.json.get("ids", [])
+    # ids має бути [17, 21, 19, ...]
+    try:
+        ordered = [int(x) for x in ids]
+    except Exception:
+        return jsonify({"ok": False}), 400
+
+    set_tracks_order(mix_id, ordered)
+    return jsonify({"ok": True}), 200
 
 if __name__ == "__main__":
     init_db()

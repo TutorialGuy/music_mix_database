@@ -202,6 +202,19 @@ def delete_mix_track(mix_track_id: int) -> bool:
         conn.commit()
     return True
 
+def delete_mix_tracks_bulk(mix_id: int, ids: list[int]) -> bool:
+    if not ids:
+        return False
+
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            f"DELETE FROM mix_tracks WHERE mix_id=? AND id IN ({','.join(['?']*len(ids))})",
+            [mix_id] + ids
+        )
+        conn.commit()
+    return True
+
 #TAGS#
 def get_mix_tags(mix_id: int) -> list[str]:
     with get_connection() as conn:
@@ -366,3 +379,13 @@ def search_mixes(query):
             ORDER BY id DESC
         """, (q, q, q))
         return cur.fetchall()
+
+def set_tracks_order(mix_id: int, ordered_ids: list[int]) -> None:
+    with get_connection() as conn:
+        cur = conn.cursor()
+        for idx, track_id in enumerate(ordered_ids, start=1):
+            cur.execute(
+                "UPDATE mix_tracks SET pos=? WHERE id=? AND mix_id=?",
+                (idx, track_id, mix_id)
+            )
+        conn.commit()

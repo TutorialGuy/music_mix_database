@@ -17,44 +17,55 @@
 
     <!-- Ліва колонка: трекліст -->
     <div class="mix-left">
+
+        <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
+          <button type="button" id="toggleEdit">✏️ Редагувати трекліст</button>
+
+          <div id="editBar" style="display:none; gap:10px; align-items:center;">
+            <button type="button" id="deleteSelected" style="color:#ff6b6b;">🗑️ Видалити вибране</button>
+            <small style="color:gray;">Перетягуй треки мишкою, щоб змінити порядок</small>
+          </div>
+        </div>
+
         <h3>Трекліст</h3>
 
         {% if not tracks %}
             <p>Поки що немає треків.</p>
         {% else %}
-            <ol>
-                {% for t in tracks %}
-                   <li>
-                      {% if t.time_value %}
-                        <b>[{{ t.time_value }}]</b>
-                      {% endif %}
+            <ol id="tracklist">
+              {% for t in tracks %}
+                <li data-track-id="{{ t.mix_track_id }}" style="margin-bottom:10px;">
 
-                      {% if t.artist %}
-                        <b>{{ t.artist }} — {{ t.title }}</b>
-                      {% else %}
-                        <b>{{ t.title }}</b>
-                      {% endif %}
+                  <!-- Рядок перегляду -->
+                  <div class="viewRow" style="display:flex; gap:10px; align-items:center;">
+                    <span class="dragHandle" style="display:none; cursor:grab;">☰</span>
 
-                      {% if t.sc_track %}
-                        ( <a href="{{ t.sc_track }}" target="_blank">SoundCloud</a> )
-                      {% endif %}
+                    <input class="selectBox" type="checkbox" style="display:none;">
 
-                      <a href="/delete-track/{{ t.mix_track_id }}" style="color:red; margin-left:10px;">[видалити]</a>
+                    <div style="flex:1;">
+                      {% if t.time_value %}<b>[{{ t.time_value }}]</b>{% endif %}
+                      {% if t.artist %}<b>{{ t.artist }} — {{ t.title }}</b>{% else %}<b>{{ t.title }}</b>{% endif %}
+                      {% if t.sc_track %} ( <a href="{{ t.sc_track }}" target="_blank">SoundCloud</a> ){% endif %}
+                    </div>
 
-                      <details style="margin-top:6px;">
-                        <summary style="cursor:pointer;">✏️ редагувати</summary>
+                    <button type="button" class="toggleInlineEdit" style="display:none;">✏️</button>
+                  </div>
 
-                        <form method="post" action="/mix/{{ mix_id }}/update-track/{{ t.mix_track_id }}" style="margin-top:8px;">
-                          <input name="time" value="{{ t.time_value or '' }}" placeholder="00:00:00" style="width:120px;">
-                          <input name="artist" value="{{ t.artist or '' }}" placeholder="Артист" style="width:220px;">
-                          <input name="title" value="{{ t.title or '' }}" placeholder="Назва треку *" style="width:260px;">
-                          <input name="soundcloud" value="{{ t.sc_track or '' }}" placeholder="SoundCloud URL" style="width:260px;">
-                          <button type="submit">Зберегти</button>
-                        </form>
-                      </details>
-                    </li>
+                  <!-- Інлайн-редагування (приховане) -->
+                  <div class="editRow" style="display:none; margin-top:6px;">
+                    <form class="inlineEditForm"
+                          data-url="/mix/{{ mix_id }}/update-track/{{ t.mix_track_id }}"
+                          style="margin-top:8px;">
+                      <input name="time" value="{{ t.time_value or '' }}" placeholder="00:00:00" style="width:120px;">
+                      <input name="artist" value="{{ t.artist or '' }}" placeholder="Артист" style="width:220px;">
+                      <input name="title" value="{{ t.title or '' }}" placeholder="Назва треку *" style="width:260px;">
+                      <input name="soundcloud" value="{{ t.sc_track or '' }}" placeholder="SoundCloud URL" style="width:260px;">
+                      <button type="submit">Зберегти</button>
+                    </form>
+                  </div>
 
-                {% endfor %}
+                </li>
+              {% endfor %}
             </ol>
         {% endif %}
 
@@ -197,6 +208,7 @@
   <a href="/mixes">⬅️ Назад до списку міксів</a>
 </p>
 
+<!-- JAVASCRIPT -->
 <script>
   (function(){
     const dz = document.getElementById("dropzone");
@@ -223,6 +235,189 @@
       }
     });
   })();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script>
+  const toggleBtn = document.getElementById("toggleEdit");
+  const editBar = document.getElementById("editBar");
+  const list = document.getElementById("tracklist");
+  const delBtn = document.getElementById("deleteSelected");
+
+  let editMode = false;
+  let sortable = null;
+
+  function setEditMode(on) {
+    editMode = on;
+    toggleBtn.textContent = on ? "✅ Готово" : "✏️ Редагувати трекліст";
+    editBar.style.display = on ? "flex" : "none";
+
+    document.querySelectorAll(".selectBox").forEach(el => el.style.display = on ? "inline-block" : "none");
+    document.querySelectorAll(".dragHandle").forEach(el => el.style.display = on ? "inline-block" : "none");
+    document.querySelectorAll(".toggleInlineEdit").forEach(el => el.style.display = on ? "inline-block" : "none");
+
+    // закриваємо всі відкриті editRow при виході
+    if (!on) {
+      document.querySelectorAll(".editRow").forEach(el => el.style.display = "none");
+      document.querySelectorAll(".selectBox").forEach(el => el.checked = false);
+    }
+
+    // drag&drop
+    if (on && !sortable) {
+      sortable = new Sortable(list, {
+        handle: ".dragHandle",
+        animation: 150,
+        onEnd: async function () {
+          const ids = [...document.querySelectorAll("li[data-track-id]")]
+            .map(li => li.dataset.trackId);
+
+          await fetch(`/mix/${MIX_ID}/reorder-tracks`, {
+            method: "POST",
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({ids})
+          });
+        }
+      });
+    }
+    if (!on && sortable) {
+      sortable.destroy();
+      sortable = null;
+    }
+  }
+
+  toggleBtn.addEventListener("click", () => setEditMode(!editMode));
+
+  // відкривати/закривати інлайн-форму редагування конкретного треку
+  document.querySelectorAll(".toggleInlineEdit").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const li = btn.closest("li");
+      const editRow = li.querySelector(".editRow");
+      editRow.style.display = (editRow.style.display === "none" || !editRow.style.display) ? "block" : "none";
+    });
+  });
+
+  // групове видалення
+  delBtn.addEventListener("click", async () => {
+      const selectedLis = Array.from(document.querySelectorAll("#tracklist li"))
+        .filter(li => li.querySelector(".selectBox").checked);
+
+      const ids = selectedLis
+        .map(li => parseInt(li.dataset.trackId, 10))
+        .filter(n => Number.isFinite(n));
+
+      if (ids.length === 0) return;
+      if (!confirm(`Видалити вибрані треки (${ids.length})?`)) return;
+
+      const resp = await fetch(`/mix/{{ mix_id }}/delete-tracks`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ ids })
+      });
+
+      if (!resp.ok) {
+        alert("Не вдалося видалити треки");
+        return;
+      }
+
+      // ✅ Видаляємо рядки з DOM
+      selectedLis.forEach(li => li.remove());
+
+      // ✅ Чистимо залишкові чекбокси (на всяк випадок)
+      document.querySelectorAll(".selectBox").forEach(cb => cb.checked = false);
+
+      // ✅ edit-mode НЕ вимикаємо
+    });
+
+    document.querySelectorAll(".inlineEditForm").forEach(form => {
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const url = form.dataset.action;
+        const fd = new FormData(form);
+
+        const resp = await fetch(url, { method: "POST", body: fd });
+        if (!resp.ok) {
+          alert("Не вдалося зберегти трек");
+          return;
+        }
+
+        // ✅ оновимо рядок перегляду (текст) без reload
+        const li = form.closest("li");
+        const time = (fd.get("time") || "").trim();
+        const artist = (fd.get("artist") || "").trim();
+        const title = (fd.get("title") || "").trim();
+        const sc = (fd.get("soundcloud") || "").trim();
+
+        const view = li.querySelector(".viewRow div[style*='flex:1']");
+        let label = "";
+        if (time) label += `<b>[${time}]</b> `;
+        if (artist) label += `<b>${escapeHtml(artist)} — ${escapeHtml(title)}</b>`;
+        else label += `<b>${escapeHtml(title)}</b>`;
+        if (sc) label += ` ( <a href="${escapeAttr(sc)}" target="_blank">SoundCloud</a> )`;
+
+        view.innerHTML = label;
+
+        // ✅ НЕ вимикаємо edit-mode і не закриваємо панель
+        // ✅ Можна залишити editRow відкритим або закрити тільки цей editRow:
+        // li.querySelector(".editRow").style.display = "none";
+      });
+    });
+
+    // прості escape-функції щоб не зламати HTML
+    function escapeHtml(s) {
+      return s.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;");
+    }
+    function escapeAttr(s){ return escapeHtml(s); }
+
+    function escapeHtml(s){
+  return (s ?? "").toString()
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#39;");
+}
+
+document.querySelectorAll(".inlineEditForm").forEach(form => {
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const url = form.dataset.url;
+    const fd = new FormData(form);
+
+    const resp = await fetch(url, { method: "POST", body: fd });
+    const data = await resp.json().catch(() => ({}));
+
+    if (!resp.ok) {
+      alert("❌ Помилка: назва треку обов’язкова");
+      return;
+    }
+
+
+    // оновимо текст треку у “view” режимі
+    const li = form.closest("li");
+    const time = (fd.get("time") || "").trim();
+    const artist = (fd.get("artist") || "").trim();
+    const title = (fd.get("title") || "").trim();
+    const sc = (fd.get("soundcloud") || "").trim();
+
+    const view = li.querySelector(".trackView"); // дивись нижче
+    let label = "";
+    if (time) label += `<b>[${escapeHtml(time)}]</b> `;
+    if (artist) label += `<b>${escapeHtml(artist)} — ${escapeHtml(title)}</b>`;
+    else label += `<b>${escapeHtml(title)}</b>`;
+    if (sc) label += ` ( <a href="${escapeHtml(sc)}" target="_blank">SoundCloud</a> )`;
+    view.innerHTML = label;
+
+    // ✅ панель редагування не закриваємо
+  });
+});
+
+    const MIX_ID = {{ mix_id }};
+</script>
+
+<script>
+  window.MIX_ID = {{ mix_id }};
 </script>
 
 {% endblock %}
