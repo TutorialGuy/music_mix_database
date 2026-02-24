@@ -294,9 +294,17 @@ def update_track_inline(mix_id, mix_track_id):
 
     ok = update_mix_track(mix_track_id, artist, title, soundcloud, time_value)
     if not ok:
-        return jsonify({"ok": False, "error": "track_title_required"}), 400
+        return jsonify({"ok": False}), 400
 
-    return jsonify({"ok": True}), 200
+    return jsonify({
+        "ok": True,
+        "artist": artist.strip(),
+        "title": title.strip(),
+        "time": time_value.strip(),
+        "soundcloud": soundcloud.strip()
+    })
+
+    return redirect(f"/mix/{mix_id}")
 
 @app.route("/mix/<int:mix_id>/update-cover", methods=["POST"])
 def update_cover(mix_id):
