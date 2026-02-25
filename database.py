@@ -202,18 +202,37 @@ def delete_mix_track(mix_track_id: int) -> bool:
         conn.commit()
     return True
 
-def delete_mix_tracks_bulk(mix_id: int, ids: list[int]) -> bool:
+def delete_mix_tracks_bulk(mix_id: int, ids: list[int]) -> int:
     if not ids:
-        return False
+        return 0
 
     with get_connection() as conn:
         cur = conn.cursor()
+
+        # видаляємо тільки ті треки, які належать цьому міксу
+        qmarks = ",".join(["?"] * len(ids))
+        params = [mix_id] + ids
+
         cur.execute(
-            f"DELETE FROM mix_tracks WHERE mix_id=? AND id IN ({','.join(['?']*len(ids))})",
-            [mix_id] + ids
+            f"DELETE FROM mix_tracks WHERE mix_id = ? AND id IN ({qmarks})",
+            params
         )
+
+        deleted = cur.rowcount if cur.rowcount is not None else 0
+
+        # після видалення: “стиснути” pos щоб не було дір
+        cur.execute("""
+            SELECT id FROM mix_tracks
+            WHERE mix_id = ?
+            ORDER BY pos
+        """, (mix_id,))
+        rows = cur.fetchall()
+
+        for i, (track_id,) in enumerate(rows, start=1):
+            cur.execute("UPDATE mix_tracks SET pos=? WHERE id=?", (i, track_id))
+
         conn.commit()
-    return True
+        return deleted
 
 #TAGS#
 def get_mix_tags(mix_id: int) -> list[str]:

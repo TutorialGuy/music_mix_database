@@ -20,9 +20,8 @@
 
         <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
           <button type="button" id="editTracklistBtn">Редагувати трекліст</button>
-
           <div id="editBar" style="display:none; gap:10px; align-items:center;">
-            <button type="button" id="deleteSelected" style="color:#ff6b6b;">🗑️ Видалити вибране</button>
+            <button type="button" id="deleteSelectedBtn" style="display:none; margin-left:10px;"> Видалити обране </button>
             <small style="color:gray;">Перетягуй треки мишкою, щоб змінити порядок</small>
           </div>
         </div>
@@ -37,12 +36,16 @@
                 <li data-track-id="{{ t.mix_track_id }}" style="margin-bottom:10px;">
 
                   <div class="viewRow" style="display:flex; gap:10px; align-items:center;">
-                    <span class="dragHandle" style="display:none; cursor:grab;">☰</span>
                     <input class="selectBox" type="checkbox" style="display:none;">
+                    <span class="dragHandle" style="display:none; cursor:grab;">☰</span>
 
-                    <div style="flex:1;">
+                    <div class="trackText" style="flex:1;">
                       {% if t.time_value %}<b>[{{ t.time_value }}]</b>{% endif %}
-                      {% if t.artist %}<b>{{ t.artist }} — {{ t.title }}</b>{% else %}<b>{{ t.title }}</b>{% endif %}
+                      {% if t.artist %}
+                        <b>{{ t.artist }} — {{ t.title }}</b>
+                      {% else %}
+                        <b>{{ t.title }}</b>
+                      {% endif %}
                       {% if t.sc_track %} ( <a href="{{ t.sc_track }}" target="_blank">SoundCloud</a> ){% endif %}
                     </div>
 
@@ -51,8 +54,7 @@
 
                   <div class="editRow" style="display:none; margin-top:6px;">
                     <form class="inlineEditForm"
-                          data-url="/mix/{{ mix_id }}/update-track/{{ t.mix_track_id }}"
-                          style="margin-top:8px;">
+                          data-url="/mix/{{ mix_id }}/update-track/{{ t.mix_track_id }}">
                       <input name="time" value="{{ t.time_value or '' }}" placeholder="00:00:00" style="width:120px;">
                       <input name="artist" value="{{ t.artist or '' }}" placeholder="Артист" style="width:220px;">
                       <input name="title" value="{{ t.title or '' }}" placeholder="Назва треку *" style="width:260px;">

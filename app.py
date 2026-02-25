@@ -279,11 +279,24 @@ def import_tracks(mix_id):
 def delete_tracks_bulk(mix_id):
     data = request.get_json(silent=True) or {}
     ids = data.get("ids", [])
+
+    # базова валідація
     if not isinstance(ids, list):
         return jsonify({"ok": False}), 400
 
-    ok = delete_mix_tracks_bulk(mix_id, ids)
-    return jsonify({"ok": ok})
+    # перетворити в int, відсіяти сміття
+    clean_ids = []
+    for x in ids:
+        try:
+            clean_ids.append(int(x))
+        except (TypeError, ValueError):
+            pass
+
+    if not clean_ids:
+        return jsonify({"ok": True, "deleted": 0})
+
+    deleted = delete_mix_tracks_bulk(mix_id, clean_ids)
+    return jsonify({"ok": True, "deleted": deleted})
 
 @app.route("/mix/<int:mix_id>/update-track/<int:mix_track_id>", methods=["POST"])
 def update_track_inline(mix_id, mix_track_id):
