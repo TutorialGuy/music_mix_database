@@ -2,79 +2,132 @@ console.log("app.js loaded");
 
 document.addEventListener("DOMContentLoaded", () => {
   const trackList = document.getElementById("trackList");
-  if (!trackList) return; // це не сторінка mix_detail
-
-  const mixId = trackList.dataset.mixId;
-
   const editBtn = document.getElementById("editTracklistBtn");
   const editBar = document.getElementById("editBar");
   const deleteBtn = document.getElementById("deleteSelectedBtn");
 
-  // ---------- helpers ----------
-  function escapeHtml(s) {
-    return String(s)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
+  console.log("DEBUG: trackList =", trackList);
+  console.log("DEBUG: editBtn   =", editBtn);
+  console.log("DEBUG: editBar   =", editBar);
+  console.log("DEBUG: deleteBtn =", deleteBtn);
 
-  function escapeAttr(s) {
-    return escapeHtml(s);
+  if (!trackList || !editBtn) return;
+
+  const mixId = trackList.dataset.mixId;
+  console.log("DEBUG: mixId =", mixId, "dataset =", trackList.dataset);
+
+  // ----- helpers -----
+  function isEditing() {
+    return trackList.dataset.editing === "1";
   }
 
   function setEditingMode(on) {
     trackList.dataset.editing = on ? "1" : "0";
 
-    // показ/ховання елементів у списку
-    trackList.querySelectorAll(".dragHandle").forEach((el) => {
+
+    // показуємо/ховаємо панель
+    if (editBar) editBar.style.display = on ? "flex" : "none";
+    if (deleteBtn) deleteBtn.style.display = on ? "inline-block" : "none";
+    editBtn.textContent = on ? "Завершити редагування" : "Редагувати трекліст";
+
+    // показуємо/ховаємо елементи в рядках
+    trackList.querySelectorAll(".dragHandle").forEach(el => {
       el.style.display = on ? "inline" : "none";
     });
 
-    trackList.querySelectorAll(".selectBox").forEach((el) => {
+    trackList.querySelectorAll(".selectBox").forEach(el => {
       el.style.display = on ? "inline-block" : "none";
       if (!on) el.checked = false;
     });
 
-    trackList.querySelectorAll(".toggleInlineEdit").forEach((el) => {
+    trackList.querySelectorAll(".toggleInlineEdit").forEach(el => {
       el.style.display = on ? "inline-block" : "none";
     });
 
-    // завжди ховаємо всі інлайн-форми при перемиканні режиму
-    trackList.querySelectorAll(".editRow").forEach((el) => {
-      el.style.display = "none";
-    });
+    // при виході з режиму — ховаємо всі editRow
+    if (!on) {
+      trackList.querySelectorAll(".editRow").forEach(el => {
+        el.style.display = "none";
+      });
+    }
 
-    // панель керування
-    if (deleteBtn) deleteBtn.style.display = on ? "inline-block" : "none";
-    if (editBar) editBar.style.display = on ? "flex" : "none";
-    if (editBtn) editBtn.textContent = on ? "Завершити редагування" : "Редагувати трекліст";
-
-    // пам'ятаємо режим редагування
-    localStorage.setItem(`mix_edit_mode_${mixId}`, on ? "1" : "0");
+    console.log("DEBUG: setEditingMode(", on, ") -> dataset.editing =", trackList.dataset.editing);
   }
 
-  function isEditing() {
-    return trackList.dataset.editing === "1";
-  }
+let dragSrcLi = null;
 
-  // ---------- restore edit mode ----------
-  const saved = localStorage.getItem(`mix_edit_mode_${mixId}`);
-  if (saved === "1") {
-    setEditingMode(true);
+function liFromEventTarget(target) {
+  return target.closest("li[data-track-id]");
+}
+
+function persistOrder() {
+  const ids = Array.from(trackList.querySelectorAll("li[data-track-id]"))
+    .map(li => li.dataset.trackId);
+
+  fetch(`/mix/${mixId}/reorder-tracks`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ids })
+  }).catch(err => console.error("reorder save failed", err));
+}
+
+// Drag start тільки за handle
+trackList.addEventListener("dragstart", (e) => {
+  if (!isEditing()) return;
+  if (!e.target.classList.contains("dragHandle")) return;
+
+  const li = liFromEventTarget(e.target);
+  if (!li) return;
+
+  dragSrcLi = li;
+  e.dataTransfer.effectAllowed = "move";
+  e.dataTransfer.setData("text/plain", li.dataset.trackId || "");
+});
+
+trackList.addEventListener("dragover", (e) => {
+  if (!isEditing()) return;
+  if (!dragSrcLi) return;
+  e.preventDefault(); // дозволяє drop
+  e.dataTransfer.dropEffect = "move";
+});
+
+trackList.addEventListener("drop", (e) => {
+  if (!isEditing()) return;
+  if (!dragSrcLi) return;
+  e.preventDefault();
+
+  const targetLi = liFromEventTarget(e.target);
+  if (!targetLi || targetLi === dragSrcLi) return;
+
+  const rect = targetLi.getBoundingClientRect();
+  const before = (e.clientY - rect.top) < rect.height / 2;
+
+  if (before) {
+    trackList.insertBefore(dragSrcLi, targetLi);
   } else {
-    setEditingMode(false);
+    trackList.insertBefore(dragSrcLi, targetLi.nextSibling);
   }
 
-  // ---------- toggle edit mode button ----------
-  if (editBtn) {
-    editBtn.addEventListener("click", () => {
-      setEditingMode(!isEditing());
-    });
-  }
+  dragSrcLi = null;
+  persistOrder();
+});
 
-  // ---------- open/close inline editor ----------
+trackList.addEventListener("dragend", () => {
+  dragSrcLi = null;
+});
+
+  // ----- init -----
+  setEditingMode(false);
+
+  // ----- toggle edit mode -----
+  editBtn.addEventListener("click", () => {
+    const before = isEditing();
+    const next = !before;
+    console.log("DEBUG: editBtn CLICK, before =", before ? 1 : 0, "next =", next ? 1 : 0);
+    setEditingMode(next);
+  });
+
+  // ----- open/close inline editor -----
   trackList.addEventListener("click", (e) => {
     const btn = e.target.closest(".toggleInlineEdit");
     if (!btn) return;
@@ -85,18 +138,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const editRow = li.querySelector(".editRow");
     if (!editRow) return;
 
-    const opened = editRow.style.display !== "none";
-
-    // закриваємо всі інші
-    trackList.querySelectorAll(".editRow").forEach((r) => {
-      r.style.display = "none";
-    });
-
-    // відкриваємо/закриваємо цей
+    const opened = editRow.style.display === "block";
+    trackList.querySelectorAll(".editRow").forEach(r => r.style.display = "none");
     editRow.style.display = opened ? "none" : "block";
   });
 
-  // ---------- inline save (fetch) ----------
+  // ----- inline save (fetch) -----
   trackList.addEventListener("submit", async (e) => {
     const form = e.target.closest("form.inlineEditForm");
     if (!form) return;
@@ -110,7 +157,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const fd = new FormData(form);
-
     const title = (fd.get("title") || "").toString().trim();
     if (!title) {
       alert("Помилка: назва треку обов'язкова");
@@ -124,6 +170,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
+      // Оновлюємо текст у viewRow
       const li = form.closest("li[data-track-id]");
       if (!li) return;
 
@@ -131,51 +178,46 @@ document.addEventListener("DOMContentLoaded", () => {
       const artist = (fd.get("artist") || "").toString().trim();
       const sc = (fd.get("soundcloud") || "").toString().trim();
 
-      // оновимо "рядок перегляду" (viewRow)
-      const viewRow = li.querySelector(".viewRow");
-      if (viewRow) {
-        const textBox = viewRow.querySelector("div[style*='flex:1']") || viewRow.querySelector("div");
-        if (textBox) {
-          let html = "";
-          if (time) html += `<b>[${escapeHtml(time)}]</b> `;
-          if (artist) html += `<b>${escapeHtml(artist)} — ${escapeHtml(title)}</b>`;
-          else html += `<b>${escapeHtml(title)}</b>`;
-          if (sc) html += ` ( <a href="${escapeAttr(sc)}" target="_blank">SoundCloud</a> )`;
-          textBox.innerHTML = html;
-        }
+      const textBox = li.querySelector(".trackText");
+      if (textBox) {
+        let html = "";
+        if (time) html += `<b>[${escapeHtml(time)}]</b> `;
+        if (artist) html += `<b>${escapeHtml(artist)} — ${escapeHtml(title)}</b>`;
+        else html += `<b>${escapeHtml(title)}</b>`;
+        if (sc) html += ` ( <a href="${escapeAttr(sc)}" target="_blank">SoundCloud</a> )`;
+        textBox.innerHTML = html;
       }
 
-      // не закриваємо панель редагування трекліста
-      // але ховаємо форму цього треку
+      // Закриваємо тільки інлайн-форму цього треку
       const editRow = li.querySelector(".editRow");
       if (editRow) editRow.style.display = "none";
+
     } catch (err) {
       console.error(err);
       alert("Помилка збереження");
     }
   });
 
-  // ---------- bulk delete ----------
+  // ----- bulk delete -----
   if (deleteBtn) {
     deleteBtn.addEventListener("click", async () => {
-      const checkedIds = Array.from(trackList.querySelectorAll(".selectBox"))
-        .filter((cb) => cb.checked)
-        .map((cb) => cb.closest("li[data-track-id]")?.dataset.trackId)
-        .filter((x) => !!x);
+      const ids = Array.from(trackList.querySelectorAll(".selectBox"))
+        .filter(cb => cb.checked)
+        .map(cb => cb.closest("li[data-track-id]")?.dataset.trackId)
+        .filter(Boolean);
 
-      if (checkedIds.length === 0) {
+      if (ids.length === 0) {
         alert("Спочатку відміть треки галочками.");
         return;
       }
 
-      const ok = confirm(`Видалити обрані треки (${checkedIds.length})?`);
-      if (!ok) return;
+      if (!confirm(`Видалити обрані треки (${ids.length})?`)) return;
 
       try {
         const resp = await fetch(`/mix/${mixId}/delete-tracks`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ids: checkedIds })
+          body: JSON.stringify({ ids })
         });
 
         if (!resp.ok) {
@@ -183,22 +225,31 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        // прибираємо з DOM
-        checkedIds.forEach((id) => {
+        ids.forEach(id => {
           const li = trackList.querySelector(`li[data-track-id="${id}"]`);
           if (li) li.remove();
         });
 
         // скинути всі галочки
-        trackList.querySelectorAll(".selectBox").forEach((cb) => {
-          cb.checked = false;
-        });
+        trackList.querySelectorAll(".selectBox").forEach(cb => cb.checked = false);
 
-        // панель НЕ закриваємо
       } catch (err) {
         console.error(err);
         alert("Помилка видалення");
       }
     });
+  }
+
+  // ----- escape helpers -----
+  function escapeHtml(s) {
+    return String(s)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+  function escapeAttr(s) {
+    return escapeHtml(s);
   }
 });

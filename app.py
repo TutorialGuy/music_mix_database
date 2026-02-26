@@ -8,7 +8,7 @@ from database import (
     search_tracks, search_mixes,
     set_mix_tags, get_mix_tags, update_mix_tags,
     get_all_tags_with_counts, delete_tags,
-    delete_mix_tracks_bulk, set_tracks_order
+    delete_mix_tracks_bulk, save_track_order
 )
 from utils import (slugify, highlight, parse_track_line)
 import os
@@ -431,15 +431,20 @@ from flask import jsonify
 
 @app.route("/mix/<int:mix_id>/reorder-tracks", methods=["POST"])
 def reorder_tracks(mix_id):
-    ids = request.json.get("ids", [])
-    # ids має бути [17, 21, 19, ...]
-    try:
-        ordered = [int(x) for x in ids]
-    except Exception:
+    data = request.get_json(silent=True) or {}
+    ids = data.get("ids", [])
+    if not isinstance(ids, list):
         return jsonify({"ok": False}), 400
 
-    set_tracks_order(mix_id, ordered)
-    return jsonify({"ok": True}), 200
+    ids_int = []
+    for x in ids:
+        try:
+            ids_int.append(int(x))
+        except (TypeError, ValueError):
+            pass
+
+    save_track_order(mix_id, ids_int)
+    return jsonify({"ok": True})
 
 if __name__ == "__main__":
     init_db()

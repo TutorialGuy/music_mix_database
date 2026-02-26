@@ -399,12 +399,16 @@ def search_mixes(query):
         """, (q, q, q))
         return cur.fetchall()
 
-def set_tracks_order(mix_id: int, ordered_ids: list[int]) -> None:
+def save_track_order(mix_id: int, mix_track_ids: list[int]) -> None:
+    """
+    mix_track_ids — список id з mix_tracks у потрібному порядку.
+    Зберігаємо в pos = 1..N.
+    """
     with get_connection() as conn:
         cur = conn.cursor()
-        for idx, track_id in enumerate(ordered_ids, start=1):
+        for i, mt_id in enumerate(mix_track_ids, start=1):
             cur.execute(
                 "UPDATE mix_tracks SET pos=? WHERE id=? AND mix_id=?",
-                (idx, track_id, mix_id)
+                (i, mt_id, mix_id)
             )
         conn.commit()

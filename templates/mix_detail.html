@@ -34,36 +34,29 @@
             <ol id="trackList" data-mix-id="{{ mix_id }}">
               {% for t in tracks %}
                 <li data-track-id="{{ t.mix_track_id }}" style="margin-bottom:10px;">
+  <div class="viewRow" style="display:flex; gap:10px; align-items:center;">
+    <input class="selectBox" type="checkbox" style="display:none;">
+    <span class="dragHandle" draggable="true" style="display:none; cursor:grab;">☰</span>
 
-                  <div class="viewRow" style="display:flex; gap:10px; align-items:center;">
-                    <input class="selectBox" type="checkbox" style="display:none;">
-                    <span class="dragHandle" style="display:none; cursor:grab;">☰</span>
+    <div class="trackText" style="flex:1;">
+      {% if t.time_value %}<b>[{{ t.time_value }}]</b>{% endif %}
+      {% if t.artist %}<b>{{ t.artist }} — {{ t.title }}</b>{% else %}<b>{{ t.title }}</b>{% endif %}
+      {% if t.sc_track %} ( <a href="{{ t.sc_track }}" target="_blank">SoundCloud</a> ){% endif %}
+    </div>
 
-                    <div class="trackText" style="flex:1;">
-                      {% if t.time_value %}<b>[{{ t.time_value }}]</b>{% endif %}
-                      {% if t.artist %}
-                        <b>{{ t.artist }} — {{ t.title }}</b>
-                      {% else %}
-                        <b>{{ t.title }}</b>
-                      {% endif %}
-                      {% if t.sc_track %} ( <a href="{{ t.sc_track }}" target="_blank">SoundCloud</a> ){% endif %}
-                    </div>
+    <button type="button" class="toggleInlineEdit" style="display:none;">✏️</button>
+  </div>
 
-                    <button type="button" class="toggleInlineEdit" style="display:none;">✏️</button>
-                  </div>
-
-                  <div class="editRow" style="display:none; margin-top:6px;">
-                    <form class="inlineEditForm"
-                          data-url="/mix/{{ mix_id }}/update-track/{{ t.mix_track_id }}">
-                      <input name="time" value="{{ t.time_value or '' }}" placeholder="00:00:00" style="width:120px;">
-                      <input name="artist" value="{{ t.artist or '' }}" placeholder="Артист" style="width:220px;">
-                      <input name="title" value="{{ t.title or '' }}" placeholder="Назва треку *" style="width:260px;">
-                      <input name="soundcloud" value="{{ t.sc_track or '' }}" placeholder="SoundCloud URL" style="width:260px;">
-                      <button type="submit">Зберегти</button>
-                    </form>
-                  </div>
-
-                </li>
+  <div class="editRow" style="display:none; margin-top:6px;">
+    <form class="inlineEditForm" data-url="/mix/{{ mix_id }}/update-track/{{ t.mix_track_id }}">
+      <input name="time" value="{{ t.time_value or '' }}" placeholder="00:00:00" style="width:120px;">
+      <input name="artist" value="{{ t.artist or '' }}" placeholder="Артист" style="width:220px;">
+      <input name="title" value="{{ t.title or '' }}" placeholder="Назва треку *" style="width:260px;">
+      <input name="soundcloud" value="{{ t.sc_track or '' }}" placeholder="SoundCloud URL" style="width:260px;">
+      <button type="submit">Зберегти</button>
+    </form>
+  </div>
+</li>
               {% endfor %}
             </ol>
         {% endif %}
@@ -207,30 +200,4 @@
   <a href="/mixes">⬅️ Назад до списку міксів</a>
 </p>
 
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  const btn = document.getElementById("editTracklistBtn");
-  const list = document.getElementById("trackList");
-
-  if (!btn || !list) {
-    console.warn("Не знайдено editTracklistBtn або trackList");
-    return;
-  }
-
-  btn.addEventListener("click", () => {
-    const editing = list.dataset.editing === "1";
-    list.dataset.editing = editing ? "0" : "1";
-
-    const show = !editing;
-
-    list.querySelectorAll(".dragHandle").forEach(el => el.style.display = show ? "inline" : "none");
-    list.querySelectorAll(".selectBox").forEach(el => { el.style.display = show ? "inline" : "none"; el.checked = false; });
-    list.querySelectorAll(".toggleInlineEdit").forEach(el => el.style.display = show ? "inline" : "none");
-    list.querySelectorAll(".editRow").forEach(el => el.style.display = "none");
-
-    // якщо хочеш, щоб кнопка змінювала текст:
-    btn.textContent = show ? "Завершити редагування" : "Редагувати трекліст";
-  });
-});
-</script>
 {% endblock %}
