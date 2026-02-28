@@ -399,16 +399,24 @@ def search_mixes(query):
         """, (q, q, q))
         return cur.fetchall()
 
-def save_track_order(mix_id: int, mix_track_ids: list[int]) -> None:
-    """
-    mix_track_ids — список id з mix_tracks у потрібному порядку.
-    Зберігаємо в pos = 1..N.
-    """
+def save_track_order(mix_id: int, ids: list[int]) -> None:
+    if not ids:
+        return
+
     with get_connection() as conn:
         cur = conn.cursor()
-        for i, mt_id in enumerate(mix_track_ids, start=1):
+
+        cur.execute("SELECT id FROM mix_tracks WHERE mix_id=?", (mix_id,))
+        allowed = {row[0] for row in cur.fetchall()}
+
+        filtered = [tid for tid in ids if tid in allowed]
+        if not filtered:
+            return
+
+        for pos, tid in enumerate(filtered, start=1):
             cur.execute(
                 "UPDATE mix_tracks SET pos=? WHERE id=? AND mix_id=?",
-                (i, mt_id, mix_id)
+                (pos, tid, mix_id)
             )
+
         conn.commit()

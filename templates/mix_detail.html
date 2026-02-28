@@ -18,11 +18,14 @@
     <!-- Ліва колонка: трекліст -->
     <div class="mix-left">
 
-        <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
-          <button type="button" id="editTracklistBtn">Редагувати трекліст</button>
-          <div id="editBar" style="display:none; gap:10px; align-items:center;">
-            <button type="button" id="deleteSelectedBtn" style="display:none; margin-left:10px;"> Видалити обране </button>
-            <small style="color:gray;">Перетягуй треки мишкою, щоб змінити порядок</small>
+        <div class="tracklist-toolbar">
+          <div class="tracklist-toolbar-inner">
+            <button type="button" id="editTracklistBtn">Редагувати трекліст</button>
+
+            <div id="editBar" class="tracklist-editbar" style="display:none;">
+              <button type="button" id="deleteSelectedBtn" style="display:none;">Видалити обране</button>
+              <span class="tracklist-hint">Перетягуй треки мишкою, щоб змінити порядок</span>
+            </div>
           </div>
         </div>
 

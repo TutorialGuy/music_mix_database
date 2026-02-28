@@ -56,6 +56,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 let dragSrcLi = null;
 
+const dropIndicator = document.createElement("div");
+dropIndicator.className = "dropIndicator";
+
 function liFromEventTarget(target) {
   return target.closest("li[data-track-id]");
 }
@@ -68,10 +71,13 @@ function persistOrder() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ids })
-  }).catch(err => console.error("reorder save failed", err));
+  })
+  .then(resp => {
+    if (!resp.ok) console.error("reorder save failed, status =", resp.status);
+  })
+  .catch(err => console.error("reorder save failed", err));
 }
 
-// Drag start тільки за handle
 trackList.addEventListener("dragstart", (e) => {
   if (!isEditing()) return;
   if (!e.target.classList.contains("dragHandle")) return;
@@ -80,6 +86,8 @@ trackList.addEventListener("dragstart", (e) => {
   if (!li) return;
 
   dragSrcLi = li;
+  li.classList.add("dragging");
+
   e.dataTransfer.effectAllowed = "move";
   e.dataTransfer.setData("text/plain", li.dataset.trackId || "");
 });
@@ -87,13 +95,7 @@ trackList.addEventListener("dragstart", (e) => {
 trackList.addEventListener("dragover", (e) => {
   if (!isEditing()) return;
   if (!dragSrcLi) return;
-  e.preventDefault(); // дозволяє drop
-  e.dataTransfer.dropEffect = "move";
-});
 
-trackList.addEventListener("drop", (e) => {
-  if (!isEditing()) return;
-  if (!dragSrcLi) return;
   e.preventDefault();
 
   const targetLi = liFromEventTarget(e.target);
@@ -102,18 +104,34 @@ trackList.addEventListener("drop", (e) => {
   const rect = targetLi.getBoundingClientRect();
   const before = (e.clientY - rect.top) < rect.height / 2;
 
+  // ставимо індикатор ДО або ПІСЛЯ targetLi
   if (before) {
-    trackList.insertBefore(dragSrcLi, targetLi);
+    trackList.insertBefore(dropIndicator, targetLi);
   } else {
-    trackList.insertBefore(dragSrcLi, targetLi.nextSibling);
+    trackList.insertBefore(dropIndicator, targetLi.nextSibling);
+  }
+});
+
+trackList.addEventListener("drop", (e) => {
+  if (!isEditing()) return;
+  if (!dragSrcLi) return;
+  e.preventDefault();
+
+  // якщо індикатор стоїть у списку — вставляємо туди
+  if (dropIndicator.parentNode === trackList) {
+    trackList.insertBefore(dragSrcLi, dropIndicator);
+    dropIndicator.remove();
+    persistOrder();
   }
 
+  dragSrcLi.classList.remove("dragging");
   dragSrcLi = null;
-  persistOrder();
 });
 
 trackList.addEventListener("dragend", () => {
+  if (dragSrcLi) dragSrcLi.classList.remove("dragging");
   dragSrcLi = null;
+  if (dropIndicator.parentNode) dropIndicator.remove();
 });
 
   // ----- init -----
