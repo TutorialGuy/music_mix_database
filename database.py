@@ -63,17 +63,29 @@ def init_db():
         )
         """)
 
+        try:
+            cur.execute("ALTER TABLE mixes ADD COLUMN duration_sec INTEGER")
+        except sqlite3.OperationalError:
+            pass
+
         conn.commit()
 
 #MIXES#
-def add_mix(title, youtube, soundcloud, cover_path, tags):
+def add_mix(title: str, youtube: str, soundcloud: str, cover: str | None, tags: str, duration_sec: int | None = None) -> int:
+    title = (title or "").strip()
+    youtube_db = (youtube or "").strip() or None
+    soundcloud_db = (soundcloud or "").strip() or None
+    cover_db = (cover or "").strip() or None
+    tags_db = (tags or "").strip() or None
+
     with get_connection() as conn:
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO mixes (title, youtube, soundcloud, cover, tags)
-            VALUES (?, ?, ?, ?, ?)
-        """, (title, youtube, soundcloud, cover_path, tags))
+            INSERT INTO mixes (title, youtube, soundcloud, cover, tags, duration_sec)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (title, youtube_db, soundcloud_db, cover_db, tags_db, duration_sec))
         conn.commit()
+        return int(cur.lastrowid)
 
 def get_all_mixes():
     with get_connection() as conn:
@@ -81,10 +93,37 @@ def get_all_mixes():
         cur.execute("SELECT id, title, youtube, soundcloud, cover, tags FROM mixes ORDER BY id DESC")
         return cur.fetchall()
 
+def get_all_mixes_sorted(sort: str = "added", direction: str = "desc"):
+    sort = (sort or "added").lower()
+    direction = (direction or "desc").lower()
+    direction_sql = "ASC" if direction == "asc" else "DESC"
+
+    if sort == "title":
+        order_sql = f"title COLLATE NOCASE {direction_sql}"
+    elif sort == "duration":
+        # NULL в кінець
+        order_sql = f"(duration_sec IS NULL), duration_sec {direction_sql}"
+    else:
+        # "added" -> по id
+        order_sql = f"id {direction_sql}"
+
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(f"""
+            SELECT id, title, youtube, soundcloud, cover, tags, duration_sec
+            FROM mixes
+            ORDER BY {order_sql}
+        """)
+        return cur.fetchall()
+
 def get_mix_by_id(mix_id):
     with get_connection() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT id, title, youtube, soundcloud, cover, tags FROM mixes WHERE id=?", (mix_id,))
+        cur.execute("""
+            SELECT id, title, youtube, soundcloud, cover, tags, duration_sec
+            FROM mixes
+            WHERE id=?
+        """, (mix_id,))
         return cur.fetchone()
 
 def delete_mix(mix_id):
@@ -136,6 +175,15 @@ def update_mix_cover(mix_id, cover_path):
     with get_connection() as conn:
         cur = conn.cursor()
         cur.execute("UPDATE mixes SET cover=? WHERE id=?", (cover_path, mix_id))
+        conn.commit()
+
+def update_mix_duration(mix_id: int, duration_sec: int | None) -> None:
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE mixes SET duration_sec=? WHERE id=?",
+            (duration_sec, mix_id)
+        )
         conn.commit()
 
 #TRACKS#
@@ -247,35 +295,41 @@ def get_mix_tags(mix_id: int) -> list[str]:
         """, (mix_id,))
         return [r[0] for r in cur.fetchall()]
 
-def set_mix_tags(mix_id: int, tags) -> None:
-    """
-    Перезаписує теги міксу.
-    Приймає або list[str], або рядок "tag1, tag2, tag3".
-    """
-    # 1) нормалізуємо в list[str]
-    if tags is None:
-        tags_list = []
-    elif isinstance(tags, str):
-        tags_list = [t.strip().lower() for t in tags.split(",") if t.strip()]
-    else:
-        # очікуємо list/tuple/set
-        tags_list = [str(t).strip().lower() for t in tags if str(t).strip()]
+def set_mix_tags(mix_id: int, tags: list[str]) -> None:
+    # 0) нормалізація + прибрати пусті
+    clean = []
+    seen = set()
+    for t in tags:
+        if t is None:
+            continue
+        name = str(t).strip()
+        if not name:
+            continue
+        key = name.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        clean.append(name)
 
     with get_connection() as conn:
         cur = conn.cursor()
 
-        # 2) чистимо зв’язки для цього міксу
-        cur.execute("DELETE FROM mix_tags WHERE mix_id = ?", (mix_id,))
+        # 1) стерти старі зв'язки
+        cur.execute("DELETE FROM mix_tags WHERE mix_id=?", (mix_id,))
 
-        # 3) додаємо теги і зв’язки
-        for name in tags_list:
-            cur.execute("SELECT id FROM tags WHERE name = ?", (name,))
-            tag_id = cur.fetchone()[0]
+        # 2) додати нові
+        for name in clean:
+            cur.execute("INSERT OR IGNORE INTO tags (name) VALUES (?)", (name,))
+            cur.execute("SELECT id FROM tags WHERE name=?", (name,))
+            row = cur.fetchone()
+            if not row:
+                # якщо раптом не знайшлось — просто пропускаємо, не падаємо
+                continue
+            tag_id = row[0]
             cur.execute(
-                "INSERT OR IGNORE INTO mix_tags(mix_id, tag_id) VALUES(?, ?)",
-                (mix_id, tag_id),
+                "INSERT OR IGNORE INTO mix_tags (mix_id, tag_id) VALUES (?, ?)",
+                (mix_id, tag_id)
             )
-
         conn.commit()
 
 def delete_tags(tag_ids: list[int]) -> None:

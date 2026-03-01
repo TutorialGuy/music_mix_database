@@ -218,3 +218,24 @@ mark {
 #trackList {
   scroll-margin-top: 70px;
 }
+
+/* прибрати завеликі стандартні відступи заголовків/параграфів у mix сторінці */
+.mix-left h3 {
+  margin-top: 14px;
+  margin-bottom: 10px;
+}
+
+.mix-left p {
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+/* зменшуємо відступ після блоку тегів */
+.mix-left .tag {
+  margin: 3px 4px 3px 0;
+}
+
+/* якщо "Теги" і "Імпорт трекліста" у card — робимо компактніше */
+.mix-left .card {
+  margin-bottom: 12px;
+}

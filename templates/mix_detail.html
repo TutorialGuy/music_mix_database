@@ -42,7 +42,15 @@
     <span class="dragHandle" draggable="true" style="display:none; cursor:grab;">☰</span>
 
     <div class="trackText" style="flex:1;">
-      {% if t.time_value %}<b>[{{ t.time_value }}]</b>{% endif %}
+      {% if t.time_value %}
+          {% if youtube %}
+            <a href="{{ youtube }}&t={{ t.time_value | time_to_seconds }}" target="_blank">
+              <b>[{{ t.time_value }}]</b>
+            </a>
+          {% else %}
+            <b>[{{ t.time_value }}]</b>
+          {% endif %}
+        {% endif %}
       {% if t.artist %}<b>{{ t.artist }} — {{ t.title }}</b>{% else %}<b>{{ t.title }}</b>{% endif %}
       {% if t.sc_track %} ( <a href="{{ t.sc_track }}" target="_blank">SoundCloud</a> ){% endif %}
     </div>
@@ -153,6 +161,22 @@
     <button type="submit">Зберегти</button>
   </form>
 </details>
+
+<div style="height:14px;"></div>
+
+        <h3>Тривалість</h3>
+
+            {% if duration_sec %}
+              <div style="color:#bfbfbf; margin:6px 0 10px 0;">
+                Поточна: <b>{{ format_seconds_to_hms(duration_sec) }}</b>
+              </div>
+            {% endif %}
+
+            <form method="post" action="/mix/{{ mix_id }}/update-duration" style="display:flex; gap:10px; align-items:center;">
+              <input name="duration" value="" placeholder="01:23:45" style="width:140px;">
+              <button type="submit">Зберегти</button>
+            </form>
+            <small style="color:gray;">Формат: MM:SS або HH:MM:SS</small>
     </div>
 </div>
 

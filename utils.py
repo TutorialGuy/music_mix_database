@@ -74,7 +74,7 @@ def parse_tags_input(raw: str) -> list[str]:
         key = t.lower()
         if key not in seen:
             seen.add(key)
-            out.append(t)
+            out.append(t.lower())
     return out
 
 def _normalize_time(t: str) -> str:
@@ -180,3 +180,66 @@ def parse_track_line(line: str) -> Optional[tuple[str, str, str, str]]:
     if not title:
         return None
     return (artist, title, soundcloud, time_value)
+
+def time_to_seconds(t: str) -> int:
+    """
+    Приймає "HH:MM:SS" або "MM:SS" або "H:MM:SS".
+    Повертає секунди. Якщо формат невірний — 0.
+    """
+    if not t:
+        return 0
+
+    t = t.strip()
+    parts = t.split(":")
+    try:
+        nums = [int(p) for p in parts]
+    except ValueError:
+        return 0
+
+    if len(nums) == 2:      # MM:SS
+        mm, ss = nums
+        return mm * 60 + ss
+    if len(nums) == 3:      # HH:MM:SS
+        hh, mm, ss = nums
+        return hh * 3600 + mm * 60 + ss
+
+    return 0
+
+def parse_duration_to_seconds(raw: str) -> int | None:
+    """
+    Приймає:
+      "SS"
+      "MM:SS"
+      "HH:MM:SS"
+    Повертає секунди або None якщо порожньо/невалідно.
+    """
+    if raw is None:
+        return None
+    s = raw.strip()
+    if not s:
+        return None
+
+    if not re.fullmatch(r"\d+(:\d{1,2}){0,2}", s):
+        return None
+
+    parts = [int(p) for p in s.split(":")]
+    if len(parts) == 1:
+        return parts[0]
+    if len(parts) == 2:
+        mm, ss = parts
+        return mm * 60 + ss
+    hh, mm, ss = parts
+    return hh * 3600 + mm * 60 + ss
+
+
+def format_seconds_to_hms(seconds: int | None) -> str:
+    if seconds is None:
+        return ""
+    if seconds < 0:
+        return ""
+    hh = seconds // 3600
+    mm = (seconds % 3600) // 60
+    ss = seconds % 60
+    if hh > 0:
+        return f"{hh:02d}:{mm:02d}:{ss:02d}"
+    return f"{mm:02d}:{ss:02d}"
