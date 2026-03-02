@@ -34,7 +34,7 @@
         {% if not tracks %}
             <p>Поки що немає треків.</p>
         {% else %}
-            <ol id="trackList" data-mix-id="{{ mix_id }}">
+            <ol id="trackList" data-mix-id="{{ mix_id }}" data-youtube="{{ youtube or '' }}">
               {% for t in tracks %}
                 <li data-track-id="{{ t.mix_track_id }}" style="margin-bottom:10px;">
   <div class="viewRow" style="display:flex; gap:10px; align-items:center;">
@@ -181,7 +181,7 @@
 </div>
 
 <!-- Нижній блок: імпорт + додавання -->
-<div style="margin-top:20px;">
+<div class="mix-bottom">
 
     {% if track_error_msg %}
         <p style="color:red;"><b>{{ track_error_msg }}</b></p>

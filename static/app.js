@@ -199,11 +199,24 @@ trackList.addEventListener("dragend", () => {
       const textBox = li.querySelector(".trackText");
       if (textBox) {
         let html = "";
-        if (time) html += `<b>[${escapeHtml(time)}]</b> `;
-        if (artist) html += `<b>${escapeHtml(artist)} — ${escapeHtml(title)}</b>`;
-        else html += `<b>${escapeHtml(title)}</b>`;
-        if (sc) html += ` ( <a href="${escapeAttr(sc)}" target="_blank">SoundCloud</a> )`;
-        textBox.innerHTML = html;
+
+    if (time) {
+      const yt = (trackList.dataset.youtube || "").trim();
+      const sec = timeToSeconds(time);
+
+      if (yt && sec !== null) {
+        const join = yt.includes("?") ? "&" : "?";
+        const href = `${yt}${join}t=${sec}`;
+        html += `<a href="${escapeAttr(href)}" target="_blank"><b>[${escapeHtml(time)}]</b></a> `;
+      } else {
+        html += `<b>[${escapeHtml(time)}]</b> `;
+      }
+    }
+
+    if (artist) html += `<b>${escapeHtml(artist)} — ${escapeHtml(title)}</b>`;
+    else html += `<b>${escapeHtml(title)}</b>`;
+
+    if (sc) html += ` ( <a href="${escapeAttr(sc)}" target="_blank">SoundCloud</a> )`;
       }
 
       // Закриваємо тільки інлайн-форму цього треку
@@ -271,3 +284,25 @@ trackList.addEventListener("dragend", () => {
     return escapeHtml(s);
   }
 });
+
+function timeToSeconds(t) {
+  if (!t) return null;
+  const s = String(t).trim();
+  if (!s) return null;
+
+  const parts = s.split(":").map(x => x.trim());
+  if (parts.length === 2) {
+    const mm = parseInt(parts[0], 10);
+    const ss = parseInt(parts[1], 10);
+    if (Number.isNaN(mm) || Number.isNaN(ss)) return null;
+    return mm * 60 + ss;
+  }
+  if (parts.length === 3) {
+    const hh = parseInt(parts[0], 10);
+    const mm = parseInt(parts[1], 10);
+    const ss = parseInt(parts[2], 10);
+    if (Number.isNaN(hh) || Number.isNaN(mm) || Number.isNaN(ss)) return null;
+    return hh * 3600 + mm * 60 + ss;
+  }
+  return null;
+}

@@ -235,7 +235,6 @@ mark {
   margin: 3px 4px 3px 0;
 }
 
-/* якщо "Теги" і "Імпорт трекліста" у card — робимо компактніше */
-.mix-left .card {
-  margin-bottom: 12px;
+.mix-bottom{
+  margin-top:20px;
 }
