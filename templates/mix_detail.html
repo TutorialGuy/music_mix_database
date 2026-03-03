@@ -136,17 +136,45 @@
 
         <h3 style="margin-top:0;">Посилання</h3>
 
-{% if youtube %}
-  <p>YouTube: <a href="{{ youtube }}" target="_blank">{{ youtube }}</a></p>
-{% else %}
-  <p>YouTube: <span style="color:gray;">(немає)</span></p>
-{% endif %}
+<div style="display:flex; flex-direction:column; gap:8px;">
 
-{% if sc_mix %}
-  <p>SoundCloud: <a href="{{ sc_mix }}" target="_blank">{{ sc_mix }}</a></p>
-{% else %}
-  <p>SoundCloud: <span style="color:gray;">(немає)</span></p>
-{% endif %}
+  {% if youtube %}
+    <a href="{{ youtube }}" target="_blank" style="display:flex; align-items:center; gap:8px;">
+      <span style="width:18px; text-align:center;">▶️</span>
+      <span>{{ mix_title }}</span>
+    </a>
+  {% else %}
+    <div style="color:gray; display:flex; align-items:center; gap:8px;">
+      <span style="width:18px; text-align:center;">▶️</span>
+      <span>YouTube: (немає)</span>
+    </div>
+  {% endif %}
+
+  {% if sc_mix %}
+    <a href="{{ sc_mix }}" target="_blank" style="display:flex; align-items:center; gap:8px;">
+      <span style="width:18px; text-align:center;">☁️</span>
+      <span>{{ mix_title }}</span>
+    </a>
+  {% else %}
+    <div style="color:gray; display:flex; align-items:center; gap:8px;">
+      <span style="width:18px; text-align:center;">☁️</span>
+      <span>SoundCloud: (немає)</span>
+    </div>
+  {% endif %}
+
+  {% if spotify %}
+    <a href="{{ spotify }}" target="_blank" style="display:flex; align-items:center; gap:8px;">
+      <span style="width:18px; text-align:center;">🎵</span>
+      <span>{{ mix_title }}</span>
+    </a>
+  {% else %}
+    <div style="color:gray; display:flex; align-items:center; gap:8px;">
+      <span style="width:18px; text-align:center;">🎵</span>
+      <span>Spotify: (немає)</span>
+    </div>
+  {% endif %}
+
+</div>
 
 <details style="margin-top:10px;">
   <summary style="cursor:pointer;">✏️ редагувати посилання</summary>
@@ -160,6 +188,11 @@
     <p style="margin:6px 0;">
       SoundCloud:<br>
       <input name="soundcloud" value="{{ sc_mix or '' }}" style="width:100%;">
+    </p>
+
+    <p style="margin:6px 0;">
+      Spotify:<br>
+      <input name="spotify" value="{{ spotify or '' }}" style="width:100%;">
     </p>
 
     <button type="submit">Зберегти</button>

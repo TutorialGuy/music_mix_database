@@ -70,20 +70,30 @@ def init_db():
 
         conn.commit()
 
+def ensure_spotify_column():
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("PRAGMA table_info(mixes)")
+        cols = {row[1] for row in cur.fetchall()}
+        if "spotify" not in cols:
+            cur.execute("ALTER TABLE mixes ADD COLUMN spotify TEXT")
+            conn.commit()
+
 #MIXES#
-def add_mix(title: str, youtube: str, soundcloud: str, cover: str | None, tags: str, duration_sec: int | None = None) -> int:
+def add_mix(title: str, youtube: str, soundcloud: str, spotify: str, cover: str | None, tags: str, duration_sec: int | None = None) -> int:
     title = (title or "").strip()
     youtube_db = (youtube or "").strip() or None
     soundcloud_db = (soundcloud or "").strip() or None
+    spotify_db = (spotify or "").strip() or None
     cover_db = (cover or "").strip() or None
     tags_db = (tags or "").strip() or None
 
     with get_connection() as conn:
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO mixes (title, youtube, soundcloud, cover, tags, duration_sec)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (title, youtube_db, soundcloud_db, cover_db, tags_db, duration_sec))
+            INSERT INTO mixes (title, youtube, soundcloud, spotify, cover, tags, duration_sec)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (title, youtube_db, soundcloud_db, spotify_db, cover_db, tags_db, duration_sec))
         conn.commit()
         return int(cur.lastrowid)
 
@@ -120,7 +130,7 @@ def get_mix_by_id(mix_id):
     with get_connection() as conn:
         cur = conn.cursor()
         cur.execute("""
-            SELECT id, title, youtube, soundcloud, cover, tags, duration_sec
+            SELECT id, title, youtube, soundcloud, spotify, cover, tags, duration_sec
             FROM mixes
             WHERE id=?
         """, (mix_id,))
@@ -161,14 +171,18 @@ def delete_mix(mix_id):
 
     return True
 
-def update_mix_links(mix_id: int, youtube: str, soundcloud: str) -> None:
+def update_mix_links(mix_id: int, youtube: str, soundcloud: str, spotify: str) -> None:
+    youtube_db = (youtube or "").strip() or None
+    sc_db = (soundcloud or "").strip() or None
+    sp_db = (spotify or "").strip() or None
+
     with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
+        cur = conn.cursor()
+        cur.execute("""
             UPDATE mixes
-            SET youtube = ?, soundcloud = ?
-            WHERE id = ?
-        """, (youtube.strip(), soundcloud.strip(), mix_id))
+            SET youtube=?, soundcloud=?, spotify=?
+            WHERE id=?
+        """, (youtube_db, sc_db, sp_db, mix_id))
         conn.commit()
 
 def update_mix_cover(mix_id, cover_path):
@@ -477,3 +491,5 @@ def save_track_order(mix_id: int, ids: list[int]) -> None:
             )
 
         conn.commit()
+
+ensure_spotify_column()

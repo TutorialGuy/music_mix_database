@@ -97,6 +97,7 @@ def add_mix_page():
     title_value = ""
     youtube_value = ""
     soundcloud_value = ""
+    spotify_value = ""
     tags_value = ""
     duration_value = ""
     duration_sec = None
@@ -110,6 +111,7 @@ def add_mix_page():
         title_value = request.form.get("title", "").strip()
         youtube_value = request.form.get("youtube", "").strip()
         soundcloud_value = request.form.get("soundcloud", "").strip()
+        spotify_value = request.form.get("spotify", "")
 
         raw_tags = request.form.get("tags", "").strip()
         tags_list = parse_tags_input(raw_tags)          # ✅ список
@@ -166,13 +168,14 @@ def add_mix_page():
         # --- створення мікса ---
         if not error_msg:
             new_id = add_mix(
-                title_value,
-                youtube_value,
-                soundcloud_value,
-                cover_path,
-                "",              # tags string у mixes більше не потрібен -> залишимо порожнім
-                duration_sec
-            )
+            title_value.strip(),
+            youtube_value.strip(),
+            soundcloud_value.strip(),
+            spotify_value.strip(),
+            cover_path,
+            tags_value.strip(),
+            duration_sec
+        )
 
             # ✅ зберігаємо теги у зв’язкові таблиці
             set_mix_tags(new_id, tags_list)
@@ -185,6 +188,7 @@ def add_mix_page():
         title_value=title_value,
         youtube_value=youtube_value,
         soundcloud_value=soundcloud_value,
+        spotify_value=spotify_value,
         tags_value=tags_value,
         duration_value=duration_value
     )
@@ -225,7 +229,7 @@ def mix_detail(mix_id):
     tracks_raw = get_tracks_for_mix(mix_id)
 
     # розпаковка міксу
-    mix_id_db, mix_title, youtube, sc_mix, cover, _tags_cache, duration_sec = mix
+    mix_id_db, mix_title, youtube, sc_mix, spotify, cover, _tags_cache, duration_sec = mix
 
     tags_list = get_mix_tags(mix_id_db)  # тільки список
     tags_input = ", ".join(tags_list)  # рядок для input
@@ -258,6 +262,7 @@ def mix_detail(mix_id):
         duration_sec=duration_sec,
         youtube=youtube,
         sc_mix=sc_mix,
+        spotify=spotify,
         cover=cover,
         cover_error_msg=cover_error_msg,
         track_error_msg=track_error_msg,
@@ -449,8 +454,9 @@ def update_tags(mix_id):
 def update_mix_links_inline(mix_id):
     youtube = request.form.get("youtube", "")
     sc_mix = request.form.get("soundcloud", "")
+    spotify = request.form.get("spotify", "")
 
-    update_mix_links(mix_id, youtube, sc_mix)
+    update_mix_links(mix_id, youtube, sc_mix, spotify)
     return redirect(f"/mix/{mix_id}")
 
 @app.route("/delete-track/<int:mix_track_id>")
