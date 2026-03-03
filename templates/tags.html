@@ -29,9 +29,12 @@
 </form>
 
 <!-- звичайний список тегів (коли не в режимі видалення) -->
-<div id="normalList" style="margin-top:14px;">
+<div id="normalList" style="margin-top:14px; display:flex; flex-wrap:wrap; gap:8px;">
   {% for t in tags %}
-    <span class="tag">{{ t.name }}</span>
+    <span class="tag" style="display:inline-flex; align-items:center; gap:6px;">
+      <span>{{ t.name }}</span>
+      <span style="color: var(--text-muted); font-size: 12px;">{{ t.cnt }}</span>
+    </span>
   {% endfor %}
 </div>
 

@@ -393,11 +393,14 @@ def get_all_tags_with_counts():
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT t.id, t.name, COUNT(mt.mix_id) as cnt
+            SELECT
+                t.id,
+                t.name,
+                COUNT(DISTINCT mt.mix_id) as cnt
             FROM tags t
             LEFT JOIN mix_tags mt ON mt.tag_id = t.id
             GROUP BY t.id, t.name
-            ORDER BY t.name
+            ORDER BY cnt DESC, t.name COLLATE NOCASE
         """)
         return cursor.fetchall()
 

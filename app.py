@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, render_template, send_from_directory, jsonify
+from flask import Flask, request, redirect, render_template, send_from_directory, jsonify, Response
 from database import (
     init_db, add_mix, get_all_mixes, get_mix_by_id,
     add_track_to_mix, get_tracks_for_mix,
@@ -488,6 +488,62 @@ def reorder_tracks(mix_id):
 
     save_track_order(mix_id, ids_int)
     return jsonify({"ok": True})
+
+@app.route("/mix/<int:mix_id>/export-tracklist")
+def export_tracklist(mix_id: int):
+    mix = get_mix_by_id(mix_id)
+    if not mix:
+        return redirect("/mixes")
+
+    mix_id_db, mix_title, youtube, sc_mix, cover, _tags_cache, duration_sec = mix
+
+    tracks_raw = get_tracks_for_mix(mix_id_db)
+
+    lines = []
+    lines.append(f"TITLE: {mix_title}")
+
+    if youtube:
+        lines.append(f"YOUTUBE: {youtube}")
+    if sc_mix:
+        lines.append(f"SOUNDCLOUD: {sc_mix}")
+    if duration_sec:
+        lines.append(f"DURATION: {format_seconds_to_hms(duration_sec)}")
+
+    lines.append("")  # порожній рядок
+    lines.append("TRACKLIST:")
+
+    for mix_track_id, artist, title, sc_track, time_value in tracks_raw:
+        artist = (artist or "").strip()
+        title = (title or "").strip()
+        sc_track = (sc_track or "").strip()
+        time_value = (time_value or "").strip()
+
+        # основний текст рядка
+        parts = []
+        if time_value:
+            parts.append(time_value)
+
+        if artist:
+            parts.append(f"{artist} — {title}")
+        else:
+            parts.append(f"{title}")
+
+        base = " ".join(parts)
+
+        # SoundCloud треку (якщо є)
+        if sc_track:
+            base += f"  [SC: {sc_track}]"
+
+        lines.append(base)
+
+    content = "\n".join(lines) + "\n"
+    filename = f"{slugify(mix_title) or f'mix_{mix_id_db}'}.txt"
+
+    headers = {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Content-Disposition": f'attachment; filename="{filename}"'
+    }
+    return Response(content, headers=headers)
 
 if __name__ == "__main__":
     init_db()
