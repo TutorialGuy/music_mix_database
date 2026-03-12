@@ -238,3 +238,35 @@ mark {
 .mix-bottom{
   margin-top:20px;
 }
+
+.linksBox {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-top: 8px;
+}
+
+.linkRow {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.linkRow + .linkRow {
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.linkLabel {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.linkValue a {
+  word-break: break-word;
+}
+
+.muted {
+  color: var(--text-muted);
+}

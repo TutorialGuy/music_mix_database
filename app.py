@@ -12,7 +12,7 @@ from database import (
     update_mix_duration, get_all_mixes_sorted
 )
 from utils import (slugify, highlight, _normalize_time, _strip_brackets_tail, time_to_seconds,
-                   parse_track_line, parse_tags_input, parse_duration_to_seconds, format_seconds_to_hms)
+                   parse_track_line, parse_tags_input, parse_duration_to_seconds, format_seconds_to_hms, normalize_url)
 import os
 from werkzeug.utils import secure_filename
 from PIL import Image
@@ -111,7 +111,12 @@ def add_mix_page():
         title_value = request.form.get("title", "").strip()
         youtube_value = request.form.get("youtube", "").strip()
         soundcloud_value = request.form.get("soundcloud", "").strip()
-        spotify_value = request.form.get("spotify", "")
+        spotify_value = request.form.get("spotify", "").strip()
+
+        # нормалізація URL
+        youtube_value = normalize_url(youtube_value)
+        soundcloud_value = normalize_url(soundcloud_value)
+        spotify_value = normalize_url(spotify_value)
 
         raw_tags = request.form.get("tags", "").strip()
         tags_list = parse_tags_input(raw_tags)          # ✅ список
@@ -452,9 +457,13 @@ def update_tags(mix_id):
 
 @app.route("/mix/<int:mix_id>/update-links", methods=["POST"])
 def update_mix_links_inline(mix_id):
-    youtube = request.form.get("youtube", "")
-    sc_mix = request.form.get("soundcloud", "")
-    spotify = request.form.get("spotify", "")
+    youtube = request.form.get("youtube", "").strip()
+    sc_mix = request.form.get("soundcloud", "").strip()
+    spotify = request.form.get("spotify", "").strip()
+
+    youtube = normalize_url(youtube)
+    sc_mix = normalize_url(sc_mix)
+    spotify = normalize_url(spotify)
 
     update_mix_links(mix_id, youtube, sc_mix, spotify)
     return redirect(f"/mix/{mix_id}")

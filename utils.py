@@ -243,3 +243,18 @@ def format_seconds_to_hms(seconds: int | None) -> str:
     if hh > 0:
         return f"{hh:02d}:{mm:02d}:{ss:02d}"
     return f"{mm:02d}:{ss:02d}"
+
+def normalize_url(url: str) -> str:
+    """
+    Якщо url порожній -> повертає "".
+    Якщо немає http:// або https:// -> додає https://
+    """
+    if not url:
+        return ""
+    s = str(url).strip()
+    if not s:
+        return ""
+    low = s.lower()
+    if low.startswith("http://") or low.startswith("https://"):
+        return s
+    return "https://" + s

@@ -136,44 +136,39 @@
 
         <h3 style="margin-top:0;">Посилання</h3>
 
-<div style="display:flex; flex-direction:column; gap:8px;">
-
-  {% if youtube %}
-    <a href="{{ youtube }}" target="_blank" style="display:flex; align-items:center; gap:8px;">
-      <span style="width:18px; text-align:center;">▶️</span>
-      <span>{{ mix_title }}</span>
-    </a>
-  {% else %}
-    <div style="color:gray; display:flex; align-items:center; gap:8px;">
-      <span style="width:18px; text-align:center;">▶️</span>
-      <span>YouTube: (немає)</span>
+<div class="linksBox">
+  <div class="linkRow">
+    <div class="linkLabel">YouTube</div>
+    <div class="linkValue">
+      {% if youtube %}
+        <a href="{{ youtube }}" target="_blank">{{ mix_title }}</a>
+      {% else %}
+        <span class="muted">(немає)</span>
+      {% endif %}
     </div>
-  {% endif %}
+  </div>
 
-  {% if sc_mix %}
-    <a href="{{ sc_mix }}" target="_blank" style="display:flex; align-items:center; gap:8px;">
-      <span style="width:18px; text-align:center;">☁️</span>
-      <span>{{ mix_title }}</span>
-    </a>
-  {% else %}
-    <div style="color:gray; display:flex; align-items:center; gap:8px;">
-      <span style="width:18px; text-align:center;">☁️</span>
-      <span>SoundCloud: (немає)</span>
+  <div class="linkRow">
+    <div class="linkLabel">SoundCloud</div>
+    <div class="linkValue">
+      {% if sc_mix %}
+        <a href="{{ sc_mix }}" target="_blank">{{ mix_title }}</a>
+      {% else %}
+        <span class="muted">(немає)</span>
+      {% endif %}
     </div>
-  {% endif %}
+  </div>
 
-  {% if spotify %}
-    <a href="{{ spotify }}" target="_blank" style="display:flex; align-items:center; gap:8px;">
-      <span style="width:18px; text-align:center;">🎵</span>
-      <span>{{ mix_title }}</span>
-    </a>
-  {% else %}
-    <div style="color:gray; display:flex; align-items:center; gap:8px;">
-      <span style="width:18px; text-align:center;">🎵</span>
-      <span>Spotify: (немає)</span>
+  <div class="linkRow">
+    <div class="linkLabel">Spotify</div>
+    <div class="linkValue">
+      {% if spotify %}
+        <a href="{{ spotify }}" target="_blank">{{ mix_title }}</a>
+      {% else %}
+        <span class="muted">(немає)</span>
+      {% endif %}
     </div>
-  {% endif %}
-
+  </div>
 </div>
 
 <details style="margin-top:10px;">
