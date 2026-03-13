@@ -103,10 +103,6 @@ def add_mix_page():
     duration_sec = None
 
     if request.method == "POST":
-        # --- debug (можеш потім прибрати) ---
-        print("DEBUG form keys:", list(request.form.keys()))
-        print("DEBUG files keys:", list(request.files.keys()))
-
         # --- поля ---
         title_value = request.form.get("title", "").strip()
         youtube_value = request.form.get("youtube", "").strip()
@@ -119,8 +115,8 @@ def add_mix_page():
         spotify_value = normalize_url(spotify_value)
 
         raw_tags = request.form.get("tags", "").strip()
-        tags_list = parse_tags_input(raw_tags)          # ✅ список
-        tags_value = ", ".join(tags_list)               # ✅ щоб лишалось у полі
+        tags_list = parse_tags_input(raw_tags)
+        tags_value = ", ".join(tags_list)
 
         duration_value = request.form.get("duration", "").strip()
         duration_sec = parse_duration_to_seconds(duration_value)
@@ -201,14 +197,11 @@ def add_mix_page():
         duration_value=duration_value
     )
 
-@app.route("/mix/<int:mix_id>", methods=["GET", "POST"])
+@app.route("/mix/<int:mix_id>", methods=["GET"])
 def mix_detail(mix_id):
     mix = get_mix_by_id(mix_id)
     if not mix:
         return "<h2>Мікс не знайдено</h2><p><a href='/mixes'>Назад</a></p>"
-
-    track_error_msg = ""
-
     # помилки обкладинки
     cover_error_msg = ""
     cover_err = request.args.get("cover_err", "")
@@ -220,19 +213,6 @@ def mix_detail(mix_id):
         cover_error_msg = "❌ Зображення обкладинки занадто велике (максимум 3000×3000)."
     elif cover_err == "bad":
         cover_error_msg = "❌ Не вдалося прочитати зображення. Спробуй інший файл."
-
-    # додавання треку
-    if request.method == "POST":
-        artist = request.form.get("artist", "")
-        title = request.form.get("title", "")
-        time_value = request.form.get("time", "")
-        sc_track = request.form.get("soundcloud", "")
-
-        ok = add_track_to_mix(mix_id, artist, title, sc_track, time_value)
-        if ok:
-            return redirect(f"/mix/{mix_id}")
-        else:
-            track_error_msg = "❌ Введіть хоча б назву треку (поле обов'язкове)."
 
     tracks_raw = get_tracks_for_mix(mix_id)
 
@@ -275,7 +255,6 @@ def mix_detail(mix_id):
         spotify=spotify,
         cover=cover,
         cover_error_msg=cover_error_msg,
-        track_error_msg=track_error_msg,
         tracks=tracks,
         tags=tags_list,
         tags_input=tags_input,
@@ -328,17 +307,63 @@ def import_tracks(mix_id):
 
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
 
-    added = 0
+    imported_artist_tags = []
+
     for line in lines:
         parsed = parse_track_line(line)
         if not parsed:
             continue
 
-        artist, title, soundcloud, time_value = parsed
+        artist = ""
+        title = ""
+        time_value = ""
+        soundcloud = ""
+
+        if isinstance(parsed, dict):
+            artist = (parsed.get("artist") or "").strip()
+            title = (parsed.get("title") or "").strip()
+            time_value = (parsed.get("time") or "").strip()
+            soundcloud = (parsed.get("soundcloud") or "").strip()
+
+
+        elif isinstance(parsed, tuple):
+
+            if len(parsed) >= 4:
+
+                artist = (parsed[0] or "").strip()
+                title = (parsed[1] or "").strip()
+                soundcloud = (parsed[2] or "").strip()
+                time_value = (parsed[3] or "").strip()
+
+            elif len(parsed) == 3:
+
+                artist = (parsed[0] or "").strip()
+                title = (parsed[1] or "").strip()
+                time_value = (parsed[2] or "").strip()
+                soundcloud = ""
+
+            else:
+
+                continue
+        else:
+            continue
 
         ok = add_track_to_mix(mix_id, artist, title, soundcloud, time_value)
-        if ok:
-            added += 1
+
+        if ok and artist:
+            artist_tag = artist.lower().strip()
+            if artist_tag and artist_tag not in imported_artist_tags:
+                imported_artist_tags.append(artist_tag)
+
+    if imported_artist_tags:
+        current_tags = get_mix_tags(mix_id)
+        merged_tags = list(current_tags)
+
+        for tag in imported_artist_tags:
+            if tag not in merged_tags:
+                merged_tags.append(tag)
+
+        set_mix_tags(mix_id, merged_tags)
 
     return redirect(f"/mix/{mix_id}")
 

@@ -78,32 +78,25 @@
 
        <h3>Теги</h3>
 
-        {% if tags %}
-            <p>
-                {% for tag in tags %}
-                  <span class="tag">{{ tag }}</span>
-                {% endfor %}
-            </p>
-        {% endif %}
+{% if tags %}
+  <div class="tagsDisplayBox">
+    {% for tag in tags %}
+      <span class="tag tagDisplay">{{ tag }}</span>
+    {% endfor %}
+  </div>
+{% endif %}
 
-        <form method="post" action="/mix/{{ mix_id }}/update-tags" style="margin-top:8px;">
-            <div class="tagAutocompleteWrap">
-                <input id="mixTagsInput"
-                       name="tags"
-                       value="{{ tags_input or '' }}"
-                       placeholder="drum and bass, liquid dnb"
-                       style="width:100%;"
-                       autocomplete="off">
-                <div id="mixTagsSuggest" class="tagSuggestBox"></div>
-            </div>
-            <button type="submit" style="margin-left:8px;">Зберегти теги</button>
-        </form>
+<form method="post" action="/mix/{{ mix_id }}/update-tags" class="tagsEditForm">
+  <input name="tags"
+         value="{{ tags_input or '' }}"
+         placeholder="drum and bass, liquid dnb"
+         class="tagsEditInput">
+  <button type="submit" class="tagsSaveBtn">Зберегти теги</button>
+</form>
 
-        <script id="mixAllTagsData" type="application/json">{{ all_tags|tojson }}</script>
-
-        <small style="display:block;color:gray;margin-top:4px;">
-            Формат: теги через кому. Приклад: <i>drum and bass, liquid dnb, atmospheric</i>
-        </small>
+<small class="tagsHelp">
+  Формат: теги через кому. Приклад: <i>drum and bass, liquid dnb, atmospheric</i>
+</small>
 
     </div>
 
@@ -201,7 +194,7 @@
   </form>
 </details>
 
-<div style="height:14px;"></div>
+<div class="sectionSpacer"></div>
 
         <h3>Тривалість</h3>
 
@@ -222,10 +215,6 @@
 <!-- Нижній блок: імпорт + додавання -->
 <div class="mix-bottom">
 
-    {% if track_error_msg %}
-        <p style="color:red;"><b>{{ track_error_msg }}</b></p>
-    {% endif %}
-
     <h3>Імпорт трекліста</h3>
     <form method="post" action="/mix/{{ mix_id }}/import-tracks">
       <textarea name="bulk"
@@ -239,23 +228,6 @@
 • Track"
         style="width:700px;height:220px;padding:10px;font-family:monospace;"></textarea><br>
       <button type="submit">Імпортувати</button>
-    </form>
-
-    <h3>Додати трек</h3>
-    <form method="post" action="/mix/{{ mix_id }}">
-        <p>Таймкод (ГГ:ХХ:СС):<br>
-        <input name="time" placeholder="00:00:00" style="width:150px"></p>
-
-        <p>Артист:<br>
-        <input name="artist" style="width:300px"></p>
-
-        <p>Назва треку:<br>
-        <input name="title" style="width:300px"></p>
-
-        <p>SoundCloud:<br>
-        <input name="soundcloud" style="width:400px"></p>
-
-        <button type="submit">Додати</button>
     </form>
 
 </div>
