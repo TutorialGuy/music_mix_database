@@ -97,12 +97,6 @@ def add_mix(title: str, youtube: str, soundcloud: str, spotify: str, cover: str 
         conn.commit()
         return int(cur.lastrowid)
 
-def get_all_mixes():
-    with get_connection() as conn:
-        cur = conn.cursor()
-        cur.execute("SELECT id, title, youtube, soundcloud, cover, tags FROM mixes ORDER BY id DESC")
-        return cur.fetchall()
-
 def get_all_mixes_sorted(sort: str = "added", direction: str = "desc"):
     sort = (sort or "added").lower()
     direction = (direction or "desc").lower()
@@ -362,47 +356,6 @@ def delete_tags(tag_ids: list[int]) -> None:
 
         conn.commit()
 
-def get_schema_version(conn):
-    cur = conn.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL)")
-    cur.execute("SELECT version FROM schema_version LIMIT 1")
-    row = cur.fetchone()
-    if row is None:
-        cur.execute("INSERT INTO schema_version(version) VALUES (1)")
-        conn.commit()
-        return 1
-    return row[0]
-
-def set_schema_version(conn, v):
-    cur = conn.cursor()
-    cur.execute("UPDATE schema_version SET version = ?", (v,))
-    conn.commit()
-
-def normalize_tags(raw: str) -> list[str]:
-    tags_list = [t.strip().lower() for t in raw.split(",") if t.strip()]
-    # прибираємо дублікати, але зберігаємо порядок
-    seen = set()
-    result = []
-    for t in tags_list:
-        if t not in seen:
-            seen.add(t)
-            result.append(t)
-    return result
-
-def migrate_tags_from_column():
-    """Одноразово переносить mixes.tags -> tags + mix_tags. Не шкодить, якщо запустити повторно."""
-    with get_connection() as conn:
-        cur = conn.cursor()
-
-        # беремо всі мікси, де tags не порожній
-        cur.execute("SELECT id, tags FROM mixes WHERE tags IS NOT NULL AND TRIM(tags) != ''")
-        rows = cur.fetchall()
-
-        for mix_id, raw in rows:
-            set_mix_tags(mix_id, raw)
-
-        conn.commit()
-
 def get_all_tags_with_counts():
     with get_connection() as conn:
         cursor = conn.cursor()
@@ -427,12 +380,6 @@ def get_mix_track_row(mix_track_id: int):
             WHERE id = ?
         """, (mix_track_id,))
         return cur.fetchone()
-
-def update_mix_tags(mix_id: int, tags: str):
-    with get_connection() as conn:
-        cur = conn.cursor()
-        cur.execute("UPDATE mixes SET tags = ? WHERE id = ?", (tags, mix_id))
-        conn.commit()
 
 def get_mix_cover(mix_id):
     with get_connection() as conn:

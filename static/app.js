@@ -1,15 +1,8 @@
-console.log("app.js loaded");
-
 document.addEventListener("DOMContentLoaded", () => {
   const trackList = document.getElementById("trackList");
   const editBtn = document.getElementById("editTracklistBtn");
   const editBar = document.getElementById("editBar");
   const deleteBtn = document.getElementById("deleteSelectedBtn");
-
-  console.log("DEBUG: trackList =", trackList);
-  console.log("DEBUG: editBtn   =", editBtn);
-  console.log("DEBUG: editBar   =", editBar);
-  console.log("DEBUG: deleteBtn =", deleteBtn);
 
     function initTagAutocomplete(inputId, boxId, dataScriptId) {
     const input = document.getElementById(inputId);
@@ -372,23 +365,25 @@ trackList.addEventListener("dragend", () => {
       if (textBox) {
         let html = "";
 
-    if (time) {
-      const yt = (trackList.dataset.youtube || "").trim();
-      const sec = timeToSeconds(time);
+        if (time) {
+          const yt = (trackList.dataset.youtube || "").trim();
+          const sec = timeToSeconds(time);
 
-      if (yt && sec !== null) {
-        const join = yt.includes("?") ? "&" : "?";
-        const href = `${yt}${join}t=${sec}`;
-        html += `<a href="${escapeAttr(href)}" target="_blank"><b>[${escapeHtml(time)}]</b></a> `;
-      } else {
-        html += `<b>[${escapeHtml(time)}]</b> `;
-      }
-    }
+          if (yt && sec !== null) {
+            const join = yt.includes("?") ? "&" : "?";
+            const href = `${yt}${join}t=${sec}`;
+            html += `<a href="${escapeAttr(href)}" target="_blank"><b>[${escapeHtml(time)}]</b></a> `;
+          } else {
+            html += `<b>[${escapeHtml(time)}]</b> `;
+          }
+        }
 
-    if (artist) html += `<b>${escapeHtml(artist)} — ${escapeHtml(title)}</b>`;
-    else html += `<b>${escapeHtml(title)}</b>`;
+        if (artist) html += `<b>${escapeHtml(artist)} — ${escapeHtml(title)}</b>`;
+        else html += `<b>${escapeHtml(title)}</b>`;
 
-    if (sc) html += ` ( <a href="${escapeAttr(sc)}" target="_blank">SoundCloud</a> )`;
+        if (sc) html += ` ( <a href="${escapeAttr(sc)}" target="_blank">SoundCloud</a> )`;
+
+        textBox.innerHTML = html;
       }
 
       // Закриваємо тільки інлайн-форму цього треку

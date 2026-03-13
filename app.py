@@ -17,11 +17,13 @@ from utils import (
     parse_duration_to_seconds, format_seconds_to_hms, normalize_url
 )
 import os
+import time
 from werkzeug.utils import secure_filename
 from PIL import Image
 
 
 app = Flask(__name__)
+init_db()
 
 # Має бути перевірка на 3 MB, але треба пропустити хоч щось, щоб зберегти поля
 app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024
@@ -159,7 +161,6 @@ def add_mix_page():
                         error_msg = "❌ Неможливо прочитати зображення. Спробуй інший файл."
 
             if not error_msg:
-                import time
                 safe_title = slugify(title_value) or "mix"
                 timestamp = int(time.time())
                 new_name = f"{safe_title}_cover_{timestamp}.{ext}"
@@ -184,7 +185,7 @@ def add_mix_page():
             # ✅ зберігаємо теги у зв’язкові таблиці
             set_mix_tags(new_id, tags_list)
 
-            return redirect("/mixes")
+            return redirect(f"/mix/{new_id}")
 
     all_tags = [row[1] for row in get_all_tags_with_counts()]
 
@@ -317,37 +318,16 @@ def import_tracks(mix_id):
         if not parsed:
             continue
 
-        artist = ""
-        title = ""
-        time_value = ""
-        soundcloud = ""
-
-        if isinstance(parsed, dict):
-            artist = (parsed.get("artist") or "").strip()
-            title = (parsed.get("title") or "").strip()
-            time_value = (parsed.get("time") or "").strip()
-            soundcloud = (parsed.get("soundcloud") or "").strip()
-
-
-        elif isinstance(parsed, tuple):
-
-            if len(parsed) >= 4:
-
-                artist = (parsed[0] or "").strip()
-                title = (parsed[1] or "").strip()
-                soundcloud = (parsed[2] or "").strip()
-                time_value = (parsed[3] or "").strip()
-
-            elif len(parsed) == 3:
-
-                artist = (parsed[0] or "").strip()
-                title = (parsed[1] or "").strip()
-                time_value = (parsed[2] or "").strip()
-                soundcloud = ""
-
-            else:
-
-                continue
+        if len(parsed) >= 4:
+            artist     = (parsed[0] or "").strip()
+            title      = (parsed[1] or "").strip()
+            soundcloud = (parsed[2] or "").strip()
+            time_value = (parsed[3] or "").strip()
+        elif len(parsed) == 3:
+            artist     = (parsed[0] or "").strip()
+            title      = (parsed[1] or "").strip()
+            time_value = (parsed[2] or "").strip()
+            soundcloud = ""
         else:
             continue
 
@@ -412,8 +392,6 @@ def update_track_inline(mix_id, mix_track_id):
         "soundcloud": soundcloud.strip()
     })
 
-    return redirect(f"/mix/{mix_id}")
-
 @app.route("/mix/<int:mix_id>/update-cover", methods=["POST"])
 def update_cover(mix_id):
     mix = get_mix_by_id(mix_id)
@@ -448,7 +426,6 @@ def update_cover(mix_id):
         return redirect(f"/mix/{mix_id}?cover_err=bad")
 
     # 4) зберігаємо новий файл з назвою від назви міксу
-    import time
     mix_id_db = mix[0]
     mix_title = mix[1]
     old_cover_path = mix[4]  # якщо треба
@@ -519,8 +496,6 @@ def delete_mix_page(mix_id):
     delete_mix(mix_id)
     return redirect("/mixes")
 
-from flask import jsonify
-
 @app.route("/mix/<int:mix_id>/reorder-tracks", methods=["POST"])
 def reorder_tracks(mix_id):
     data = request.get_json(silent=True) or {}
@@ -544,7 +519,7 @@ def export_tracklist(mix_id: int):
     if not mix:
         return redirect("/mixes")
 
-    mix_id_db, mix_title, youtube, sc_mix, cover, _tags_cache, duration_sec = mix
+    mix_id_db, mix_title, youtube, sc_mix, spotify, cover, _tags_cache, duration_sec = mix
 
     tracks_raw = get_tracks_for_mix(mix_id_db)
 
@@ -595,5 +570,4 @@ def export_tracklist(mix_id: int):
     return Response(content, headers=headers)
 
 if __name__ == "__main__":
-    init_db()
     app.run(debug=True)
