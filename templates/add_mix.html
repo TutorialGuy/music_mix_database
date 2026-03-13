@@ -36,9 +36,19 @@
   </p>
 
   <p>
-    Теги (через кому)<br>
-    <input name="tags" value="{{ tags_value or '' }}" placeholder="drum and bass, liquid dnb" style="width:420px;">
-  </p>
+  Теги (через кому)<br>
+  <div class="tagAutocompleteWrap" style="width:420px;">
+    <input id="addMixTagsInput"
+           name="tags"
+           value="{{ tags_value or '' }}"
+           placeholder="drum and bass, liquid dnb"
+           style="width:100%;"
+           autocomplete="off">
+    <div id="addMixTagsSuggest" class="tagSuggestBox"></div>
+  </div>
+</p>
+
+<script id="addMixAllTagsData" type="application/json">{{ all_tags|tojson }}</script>
 
   <p>
     Тривалість (MM:SS або HH:MM:SS)<br>

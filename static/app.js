@@ -11,6 +11,179 @@ document.addEventListener("DOMContentLoaded", () => {
   console.log("DEBUG: editBar   =", editBar);
   console.log("DEBUG: deleteBtn =", deleteBtn);
 
+    function initTagAutocomplete(inputId, boxId, dataScriptId) {
+    const input = document.getElementById(inputId);
+    const box = document.getElementById(boxId);
+    const dataScript = document.getElementById(dataScriptId);
+
+    if (!input || !box || !dataScript) return;
+
+    let allTags = [];
+    try {
+      allTags = JSON.parse(dataScript.textContent || "[]");
+    } catch (err) {
+      console.error("Не вдалося прочитати JSON тегів", err);
+      return;
+    }
+
+    allTags = Array.from(
+      new Set(
+        allTags
+          .map(t => String(t).trim())
+          .filter(Boolean)
+      )
+    ).sort((a, b) => a.localeCompare(b));
+
+    let activeIndex = -1;
+    let currentItems = [];
+
+    function closeSuggest() {
+      box.innerHTML = "";
+      box.style.display = "none";
+      activeIndex = -1;
+      currentItems = [];
+    }
+
+    function getCurrentTokenParts() {
+      const value = input.value;
+      const caret = input.selectionStart ?? value.length;
+
+      const beforeCaret = value.slice(0, caret);
+      const afterCaret = value.slice(caret);
+
+      const lastComma = beforeCaret.lastIndexOf(",");
+      const prefix = lastComma >= 0 ? beforeCaret.slice(0, lastComma + 1) : "";
+      const currentRaw = lastComma >= 0 ? beforeCaret.slice(lastComma + 1) : beforeCaret;
+      const leadingSpaces = (currentRaw.match(/^\s*/) || [""])[0];
+      const query = currentRaw.trim().toLowerCase();
+
+      return {
+        prefix,
+        afterCaret,
+        leadingSpaces,
+        query
+      };
+    }
+
+    function alreadyUsedTags() {
+      return input.value
+        .split(",")
+        .map(s => s.trim().toLowerCase())
+        .filter(Boolean);
+    }
+
+    function applyTag(tagName) {
+      const value = input.value;
+      const caret = input.selectionStart ?? value.length;
+
+      const beforeCaret = value.slice(0, caret);
+      const afterCaret = value.slice(caret);
+
+      const lastComma = beforeCaret.lastIndexOf(",");
+      const prefix = lastComma >= 0 ? beforeCaret.slice(0, lastComma + 1) : "";
+      const currentRaw = lastComma >= 0 ? beforeCaret.slice(lastComma + 1) : beforeCaret;
+      const leadingSpaces = (currentRaw.match(/^\s*/) || [""])[0];
+
+      const cleanedAfter = afterCaret.replace(/^\s*,?\s*/, "");
+      const newValue = `${prefix}${leadingSpaces}${tagName}, ${cleanedAfter}`;
+
+      input.value = newValue;
+
+      const newCaret = (prefix + leadingSpaces + tagName + ", ").length;
+      input.focus();
+      input.setSelectionRange(newCaret, newCaret);
+
+      closeSuggest();
+    }
+
+    function renderSuggest() {
+      const parts = getCurrentTokenParts();
+      const used = alreadyUsedTags();
+
+      if (!parts.query) {
+        closeSuggest();
+        return;
+      }
+
+      const matches = allTags
+        .filter(tag => tag.toLowerCase().startsWith(parts.query))
+        .filter(tag => !used.includes(tag.toLowerCase()))
+        .slice(0, 8);
+
+      if (matches.length === 0) {
+        box.innerHTML = '<div class="tagSuggestEmpty">Нічого не знайдено</div>';
+        box.style.display = "block";
+        activeIndex = -1;
+        currentItems = [];
+        return;
+      }
+
+      currentItems = matches;
+      box.innerHTML = "";
+      box.style.display = "block";
+
+      matches.forEach((tagName, index) => {
+        const item = document.createElement("div");
+        item.className = "tagSuggestItem";
+        item.textContent = tagName;
+
+        if (index === activeIndex) {
+          item.classList.add("active");
+        }
+
+        item.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          applyTag(tagName);
+        });
+
+        box.appendChild(item);
+      });
+    }
+
+    input.addEventListener("input", () => {
+      activeIndex = -1;
+      renderSuggest();
+    });
+
+    input.addEventListener("keydown", (e) => {
+      if (box.style.display !== "block") return;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        activeIndex = Math.min(activeIndex + 1, currentItems.length - 1);
+        renderSuggest();
+      }
+
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        activeIndex = Math.max(activeIndex - 1, 0);
+        renderSuggest();
+      }
+
+      if (e.key === "Enter") {
+        if (activeIndex >= 0 && currentItems[activeIndex]) {
+          e.preventDefault();
+          applyTag(currentItems[activeIndex]);
+        }
+      }
+
+      if (e.key === "Escape") {
+        closeSuggest();
+      }
+    });
+
+    input.addEventListener("blur", () => {
+      setTimeout(closeSuggest, 120);
+    });
+
+    input.addEventListener("focus", () => {
+      renderSuggest();
+    });
+  }
+
+  initTagAutocomplete("mixTagsInput", "mixTagsSuggest", "mixAllTagsData");
+  initTagAutocomplete("addMixTagsInput", "addMixTagsSuggest", "addMixAllTagsData");
+
   if (!trackList || !editBtn) return;
 
   const mixId = trackList.dataset.mixId;
@@ -23,7 +196,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function setEditingMode(on) {
     trackList.dataset.editing = on ? "1" : "0";
-
 
     // показуємо/ховаємо панель
     if (editBar) editBar.style.display = on ? "flex" : "none";
@@ -270,6 +442,7 @@ trackList.addEventListener("dragend", () => {
       }
     });
   }
+
 
   // ----- escape helpers -----
   function escapeHtml(s) {

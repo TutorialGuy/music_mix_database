@@ -87,12 +87,19 @@
         {% endif %}
 
         <form method="post" action="/mix/{{ mix_id }}/update-tags" style="margin-top:8px;">
-            <input name="tags"
-         value="{{ tags_input or '' }}"
-         placeholder="drum and bass, liquid dnb"
-         style="width:100%;">
+            <div class="tagAutocompleteWrap">
+                <input id="mixTagsInput"
+                       name="tags"
+                       value="{{ tags_input or '' }}"
+                       placeholder="drum and bass, liquid dnb"
+                       style="width:100%;"
+                       autocomplete="off">
+                <div id="mixTagsSuggest" class="tagSuggestBox"></div>
+            </div>
             <button type="submit" style="margin-left:8px;">Зберегти теги</button>
         </form>
+
+        <script id="mixAllTagsData" type="application/json">{{ all_tags|tojson }}</script>
 
         <small style="display:block;color:gray;margin-top:4px;">
             Формат: теги через кому. Приклад: <i>drum and bass, liquid dnb, atmospheric</i>

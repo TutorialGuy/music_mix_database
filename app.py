@@ -187,6 +187,8 @@ def add_mix_page():
 
             return redirect("/mixes")
 
+    all_tags = [row[1] for row in get_all_tags_with_counts()]
+
     return render_template(
         "add_mix.html",
         error_msg=error_msg,
@@ -195,6 +197,7 @@ def add_mix_page():
         soundcloud_value=soundcloud_value,
         spotify_value=spotify_value,
         tags_value=tags_value,
+        all_tags=all_tags,
         duration_value=duration_value
     )
 
@@ -260,6 +263,8 @@ def mix_detail(mix_id):
             "yt_at": yt_at
         })
 
+    all_tags = [row[1] for row in get_all_tags_with_counts()]
+
     return render_template(
         "mix_detail.html",
         mix_id=mix_id_db,
@@ -273,7 +278,8 @@ def mix_detail(mix_id):
         track_error_msg=track_error_msg,
         tracks=tracks,
         tags=tags_list,
-        tags_input=tags_input
+        tags_input=tags_input,
+        all_tags=all_tags
     )
 
 @app.route("/mix/<int:mix_id>/update-duration", methods=["POST"])

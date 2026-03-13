@@ -270,3 +270,40 @@ mark {
 .muted {
   color: var(--text-muted);
 }
+
+.tagAutocompleteWrap{
+  position: relative;
+}
+
+.tagSuggestBox{
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 200;
+
+  display: none;
+  max-height: 220px;
+  overflow-y: auto;
+
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+}
+
+.tagSuggestItem{
+  padding: 8px 10px;
+  cursor: pointer;
+  color: var(--text-main);
+}
+
+.tagSuggestItem:hover,
+.tagSuggestItem.active{
+  background: var(--bg-secondary);
+}
+
+.tagSuggestEmpty{
+  padding: 8px 10px;
+  color: var(--text-muted);
+}
