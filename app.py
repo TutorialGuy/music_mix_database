@@ -1,18 +1,21 @@
 from flask import Flask, request, redirect, render_template, send_from_directory, jsonify, Response
 from database import (
-    init_db, add_mix, get_all_mixes, get_mix_by_id,
+    init_db, add_mix, get_mix_by_id,
     add_track_to_mix, get_tracks_for_mix,
     get_mix_track_row, update_mix_track,
     get_mix_cover, update_mix_cover, update_mix_links,
     delete_mix_track, delete_mix,
     search_tracks, search_mixes,
-    set_mix_tags, get_mix_tags, update_mix_tags,
+    set_mix_tags, get_mix_tags,
     get_all_tags_with_counts, delete_tags,
     delete_mix_tracks_bulk, save_track_order,
     update_mix_duration, get_all_mixes_sorted
 )
-from utils import (slugify, highlight, _normalize_time, _strip_brackets_tail, time_to_seconds,
-                   parse_track_line, parse_tags_input, parse_duration_to_seconds, format_seconds_to_hms, normalize_url)
+from utils import (
+    slugify, highlight, time_to_seconds,
+    parse_track_line, parse_tags_input,
+    parse_duration_to_seconds, format_seconds_to_hms, normalize_url
+)
 import os
 from werkzeug.utils import secure_filename
 from PIL import Image
