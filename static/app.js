@@ -177,10 +177,41 @@ document.addEventListener("DOMContentLoaded", () => {
   initTagAutocomplete("mixTagsInput", "mixTagsSuggest", "mixAllTagsData");
   initTagAutocomplete("addMixTagsInput", "addMixTagsSuggest", "addMixAllTagsData");
 
+  // ----- збереження тегів без перезавантаження -----
+  const tagsForm = document.getElementById("tagsForm");
+  if (tagsForm) {
+    tagsForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const fd = new FormData(tagsForm);
+      const resp = await fetch(tagsForm.action, { method: "POST", body: fd });
+
+      if (!resp.ok) {
+        alert("Не вдалося зберегти теги");
+        return;
+      }
+
+      const data = await resp.json();
+
+      const displayBox = document.querySelector(".tagsDisplayBox");
+      if (displayBox) {
+        displayBox.innerHTML = data.tags
+          .map(t => `<span class="tag tagDisplay">${t}</span>`)
+          .join("");
+      }
+
+      const tagsInput = document.getElementById("mixTagsInput");
+      if (tagsInput) {
+        tagsInput.value = data.tags.join(", ");
+      }
+    });
+  }
+
+  if (!trackList || !editBtn) return;
+
   if (!trackList || !editBtn) return;
 
   const mixId = trackList.dataset.mixId;
-  console.log("DEBUG: mixId =", mixId, "dataset =", trackList.dataset);
 
   // ----- helpers -----
   function isEditing() {
@@ -216,7 +247,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    console.log("DEBUG: setEditingMode(", on, ") -> dataset.editing =", trackList.dataset.editing);
   }
 
 let dragSrcLi = null;
@@ -451,6 +481,7 @@ trackList.addEventListener("dragend", () => {
   function escapeAttr(s) {
     return escapeHtml(s);
   }
+//---ось тут кінець---
 });
 
 function timeToSeconds(t) {

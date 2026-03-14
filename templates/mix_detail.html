@@ -86,13 +86,20 @@
   </div>
 {% endif %}
 
-<form method="post" action="/mix/{{ mix_id }}/update-tags" class="tagsEditForm">
-  <input name="tags"
-         value="{{ tags_input or '' }}"
-         placeholder="drum and bass, liquid dnb"
-         class="tagsEditInput">
+<form method="post" action="/mix/{{ mix_id }}/update-tags" class="tagsEditForm" id="tagsForm">
+  <div class="tagAutocompleteWrap" style="width:100%;">
+    <input id="mixTagsInput"
+           name="tags"
+           value="{{ tags_input or '' }}"
+           placeholder="drum and bass, liquid dnb"
+           class="tagsEditInput"
+           autocomplete="off">
+    <div id="mixTagsSuggest" class="tagSuggestBox"></div>
+  </div>
   <button type="submit" class="tagsSaveBtn">Зберегти теги</button>
 </form>
+
+<script id="mixAllTagsData" type="application/json">{{ all_tags|tojson }}</script>
 
 <small class="tagsHelp">
   Формат: теги через кому. Приклад: <i>drum and bass, liquid dnb, atmospheric</i>
@@ -106,7 +113,7 @@
         {% if cover %}
             <div style="margin-bottom:10px;">
                 <img src="/{{ cover }}" alt="cover"
-                    style="width:260px; height:260px; object-fit:cover; border:1px solid #ccc; border-radius:10px;">
+    style="width:400px; height:auto; object-fit:contain; border:1px solid #ccc; border-radius:10px;">
             </div>
         {% endif %}
 

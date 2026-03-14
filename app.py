@@ -457,14 +457,14 @@ def update_cover(mix_id):
 def update_tags(mix_id):
     mix = get_mix_by_id(mix_id)
     if not mix:
-        return redirect("/mixes")
+        return jsonify({"ok": False}), 404
 
     raw_tags = request.form.get("tags", "")
     tags_list = parse_tags_input(raw_tags)
 
     set_mix_tags(mix_id, tags_list)
 
-    return redirect(f"/mix/{mix_id}")
+    return jsonify({"ok": True, "tags": tags_list})
 
 @app.route("/mix/<int:mix_id>/update-links", methods=["POST"])
 def update_mix_links_inline(mix_id):
