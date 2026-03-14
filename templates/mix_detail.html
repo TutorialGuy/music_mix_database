@@ -24,6 +24,7 @@
 
             <div id="editBar" class="tracklist-editbar" style="display:none;">
               <button type="button" id="deleteSelectedBtn" style="display:none;">Видалити обране</button>
+              <button type="button" id="clearTracklistBtn">🗑️ Очистити трекліст</button>
               <span class="tracklist-hint">Перетягуй треки мишкою, щоб змінити порядок</span>
             </div>
           </div>
@@ -76,34 +77,60 @@
             </ol>
         {% endif %}
 
-       <h3>Теги</h3>
+      <h3>Теги</h3>
 
-{% if tags %}
-  <div class="tagsDisplayBox">
-    {% for tag in tags %}
-      <span class="tag tagDisplay">{{ tag }}</span>
+<div class="tagsBlock" id="tagsBlock">
+
+  <!-- Режим перегляду -->
+  <div id="tagsViewMode">
+  {% if tags %}
+  <div class="tagsDisplayBox" id="tagsDisplayBox">
+    {% for tag, cnt in tags %}
+      <a href="/tag/{{ tag }}"
+         class="tag tagDisplay {% if tag.startswith('artist:') %}tag-artist{% endif %}"
+         style="text-decoration:none;">
+        {{ tag }}
+        <span class="tag-count">{{ cnt }}</span>
+      </a>
     {% endfor %}
   </div>
-{% endif %}
+  {% else %}
+  <div id="tagsDisplayBox"></div>
+  {% endif %}
+  <button type="button" id="editTagsBtn" style="margin-top:8px;">✏️ Редагувати теги</button>
+</div>
 
-<form method="post" action="/mix/{{ mix_id }}/update-tags" class="tagsEditForm" id="tagsForm">
-  <div class="tagAutocompleteWrap" style="width:100%;">
-    <input id="mixTagsInput"
-           name="tags"
-           value="{{ tags_input or '' }}"
-           placeholder="drum and bass, liquid dnb"
-           class="tagsEditInput"
-           autocomplete="off">
-    <div id="mixTagsSuggest" class="tagSuggestBox"></div>
+  <!-- Режим редагування -->
+  <div id="tagsEditMode" style="display:none;">
+    <form id="tagsForm" action="/mix/{{ mix_id }}/update-tags" method="post">
+      <div class="tagsEditBox" id="tagsEditBox">
+        {% for tag, cnt in tags %}
+          <span class="tag tagEdit {% if tag.startswith('artist:') %}tag-artist{% endif %}"
+                data-tag="{{ tag }}">
+            {{ tag }}
+            <button type="button" class="tagRemoveBtn" data-tag="{{ tag }}">×</button>
+          </span>
+        {% endfor %}
+        <div class="tagAutocompleteWrap tagInputWrap">
+          <input id="mixTagsInput"
+                 type="text"
+                 placeholder="додати тег..."
+                 class="tagInlineInput"
+                 autocomplete="off">
+          <div id="mixTagsSuggest" class="tagSuggestBox"></div>
+        </div>
+      </div>
+      <input type="hidden" name="tags" id="tagsHidden" value="{{ tags_input or '' }}">
+      <div style="margin-top:8px; display:flex; gap:8px;">
+        <button type="submit" class="tagsSaveBtn">Зберегти</button>
+        <button type="button" id="cancelTagsBtn">Скасувати</button>
+      </div>
+    </form>
   </div>
-  <button type="submit" class="tagsSaveBtn">Зберегти теги</button>
-</form>
+
+</div>
 
 <script id="mixAllTagsData" type="application/json">{{ all_tags|tojson }}</script>
-
-<small class="tagsHelp">
-  Формат: теги через кому. Приклад: <i>drum and bass, liquid dnb, atmospheric</i>
-</small>
 
     </div>
 
@@ -145,37 +172,49 @@
 
 <div class="linksBox">
   <div class="linkRow">
-    <div class="linkLabel">YouTube</div>
-    <div class="linkValue">
-      {% if youtube %}
-        <a href="{{ youtube }}" target="_blank">{{ mix_title }}</a>
-      {% else %}
-        <span class="muted">(немає)</span>
-      {% endif %}
-    </div>
+  <div class="linkLabel">
+    <img src="{{ url_for('static', filename='icons/youtube.svg') }}"
+         class="link-icon" alt="YouTube">
+    YouTube
   </div>
+  <div class="linkValue">
+    {% if youtube %}
+      <a href="{{ youtube }}" target="_blank">{{ mix_title }}</a>
+    {% else %}
+      <span class="muted">(немає)</span>
+    {% endif %}
+  </div>
+</div>
 
-  <div class="linkRow">
-    <div class="linkLabel">SoundCloud</div>
-    <div class="linkValue">
-      {% if sc_mix %}
-        <a href="{{ sc_mix }}" target="_blank">{{ mix_title }}</a>
-      {% else %}
-        <span class="muted">(немає)</span>
-      {% endif %}
-    </div>
+<div class="linkRow">
+  <div class="linkLabel">
+    <img src="{{ url_for('static', filename='icons/soundcloud.svg') }}"
+         class="link-icon" alt="SoundCloud">
+    SoundCloud
   </div>
+  <div class="linkValue">
+    {% if sc_mix %}
+      <a href="{{ sc_mix }}" target="_blank">{{ mix_title }}</a>
+    {% else %}
+      <span class="muted">(немає)</span>
+    {% endif %}
+  </div>
+</div>
 
-  <div class="linkRow">
-    <div class="linkLabel">Spotify</div>
-    <div class="linkValue">
-      {% if spotify %}
-        <a href="{{ spotify }}" target="_blank">{{ mix_title }}</a>
-      {% else %}
-        <span class="muted">(немає)</span>
-      {% endif %}
-    </div>
+<div class="linkRow">
+  <div class="linkLabel">
+    <img src="{{ url_for('static', filename='icons/spotify.svg') }}"
+         class="link-icon" alt="Spotify">
+    Spotify
   </div>
+  <div class="linkValue">
+    {% if spotify %}
+      <a href="{{ spotify }}" target="_blank">{{ mix_title }}</a>
+    {% else %}
+      <span class="muted">(немає)</span>
+    {% endif %}
+  </div>
+</div>
 </div>
 
 <details style="margin-top:10px;">

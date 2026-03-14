@@ -130,6 +130,19 @@ def get_mix_by_id(mix_id):
         """, (mix_id,))
         return cur.fetchone()
 
+def get_mixes_by_tag(tag_name: str):
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT m.id, m.title, m.cover, m.duration_sec
+            FROM mixes m
+            JOIN mix_tags mt ON mt.mix_id = m.id
+            JOIN tags t ON t.id = mt.tag_id
+            WHERE t.name = ?
+            ORDER BY m.id DESC
+        """, (tag_name,))
+        return cur.fetchall()
+
 def delete_mix(mix_id):
     with get_connection() as conn:
         cur = conn.cursor()
@@ -339,6 +352,20 @@ def set_mix_tags(mix_id: int, tags: list[str]) -> None:
                 (mix_id, tag_id)
             )
         conn.commit()
+
+def get_mix_tags_with_counts(mix_id: int) -> list[tuple[str, int]]:
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT t.name, COUNT(DISTINCT mt2.mix_id) as cnt
+            FROM tags t
+            JOIN mix_tags mt ON mt.tag_id = t.id
+            LEFT JOIN mix_tags mt2 ON mt2.tag_id = t.id
+            WHERE mt.mix_id = ?
+            GROUP BY t.id, t.name
+            ORDER BY t.name
+        """, (mix_id,))
+        return cur.fetchall()
 
 def delete_tags(tag_ids: list[int]) -> None:
     if not tag_ids:

@@ -78,11 +78,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const leadingSpaces = (currentRaw.match(/^\s*/) || [""])[0];
 
       const cleanedAfter = afterCaret.replace(/^\s*,?\s*/, "");
-      const newValue = `${prefix}${leadingSpaces}${tagName}, ${cleanedAfter}`;
+      const newValue = `${prefix}${leadingSpaces}${tagName}${cleanedAfter}`;
 
       input.value = newValue;
 
-      const newCaret = (prefix + leadingSpaces + tagName + ", ").length;
+      const newCaret = (prefix + leadingSpaces + tagName).length;
       input.focus();
       input.setSelectionRange(newCaret, newCaret);
 
@@ -177,14 +177,99 @@ document.addEventListener("DOMContentLoaded", () => {
   initTagAutocomplete("mixTagsInput", "mixTagsSuggest", "mixAllTagsData");
   initTagAutocomplete("addMixTagsInput", "addMixTagsSuggest", "addMixAllTagsData");
 
-  // ----- збереження тегів без перезавантаження -----
+// ----- теги: режим редагування -----
+  const editTagsBtn = document.getElementById("editTagsBtn");
+  const cancelTagsBtn = document.getElementById("cancelTagsBtn");
+  const tagsViewMode = document.getElementById("tagsViewMode");
+  const tagsEditMode = document.getElementById("tagsEditMode");
+  const tagsEditBox = document.getElementById("tagsEditBox");
+  const tagsHidden = document.getElementById("tagsHidden");
   const tagsForm = document.getElementById("tagsForm");
+
+  let currentTags = [];
+
+  function getTagsFromDisplay() {
+    return Array.from(
+      document.querySelectorAll("#tagsDisplayBox .tag")
+    ).map(el => el.dataset.tag || el.textContent.trim().replace(/\d+$/, "").trim());
+  }
+
+  function renderEditTags() {
+    // видаляємо всі теги-пігулки (але не інпут)
+    tagsEditBox.querySelectorAll(".tagEdit").forEach(el => el.remove());
+
+    const inputWrap = tagsEditBox.querySelector(".tagInputWrap");
+
+    currentTags.forEach(tag => {
+      const isArtist = tag.startsWith("artist:");
+      const span = document.createElement("span");
+      span.className = "tag tagEdit" + (isArtist ? " tag-artist" : "");
+      span.dataset.tag = tag;
+      span.innerHTML = `${escapeHtml(tag)} <button type="button" class="tagRemoveBtn" data-tag="${escapeAttr(tag)}">×</button>`;
+      tagsEditBox.insertBefore(span, inputWrap);
+    });
+
+    tagsHidden.value = currentTags.join(", ");
+  }
+
+  function enterEditMode() {
+    currentTags = Array.from(
+      document.querySelectorAll("#tagsDisplayBox .tag")
+    ).map(el => (el.dataset.tag || el.textContent.trim().replace(/\s*\d+\s*$/, "").trim()));
+
+    renderEditTags();
+    tagsViewMode.style.display = "none";
+    tagsEditMode.style.display = "block";
+    document.getElementById("mixTagsInput").focus();
+  }
+
+  function exitEditMode() {
+    tagsViewMode.style.display = "block";
+    tagsEditMode.style.display = "none";
+    document.getElementById("mixTagsInput").value = "";
+  }
+
+  if (editTagsBtn) editTagsBtn.addEventListener("click", enterEditMode);
+  if (cancelTagsBtn) cancelTagsBtn.addEventListener("click", exitEditMode);
+
+  // видалення тегу кнопкою ×
+  if (tagsEditBox) {
+    tagsEditBox.addEventListener("click", (e) => {
+      const btn = e.target.closest(".tagRemoveBtn");
+      if (!btn) return;
+      const tag = btn.dataset.tag;
+      currentTags = currentTags.filter(t => t !== tag);
+      renderEditTags();
+    });
+  }
+
+  // додавання тегу через Enter або кому
+  const tagInlineInput = document.getElementById("mixTagsInput");
+  if (tagInlineInput) {
+    tagInlineInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === ",") {
+        e.preventDefault();
+        const val = tagInlineInput.value.trim().replace(/,$/, "");
+        if (val && !currentTags.includes(val)) {
+          currentTags.push(val);
+          renderEditTags();
+        }
+        tagInlineInput.value = "";
+      }
+    });
+  }
+
+  // збереження через AJAX
   if (tagsForm) {
     tagsForm.addEventListener("submit", async (e) => {
       e.preventDefault();
 
+      tagsHidden.value = currentTags.join(", ");
       const fd = new FormData(tagsForm);
+      console.log("TAGS: відправляємо ->", fd.get("tags"));
+
       const resp = await fetch(tagsForm.action, { method: "POST", body: fd });
+      console.log("TAGS: статус відповіді ->", resp.status);
 
       if (!resp.ok) {
         alert("Не вдалося зберегти теги");
@@ -192,18 +277,24 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const data = await resp.json();
+      console.log("TAGS: отримали від сервера ->", data);
 
-      const displayBox = document.querySelector(".tagsDisplayBox");
+      // оновлюємо блок перегляду
+      const displayBox = document.getElementById("tagsDisplayBox");
+      console.log("TAGS: displayBox знайдено ->", !!displayBox);
       if (displayBox) {
         displayBox.innerHTML = data.tags
-          .map(t => `<span class="tag tagDisplay">${t}</span>`)
+          .map(([name, cnt]) => `<a href="/tag/${encodeURIComponent(name)}"
+            class="tag tagDisplay${name.startsWith("artist:") ? " tag-artist" : ""}"
+            style="text-decoration:none;"
+            data-tag="${escapeAttr(name)}">
+            ${escapeHtml(name)} <span class="tag-count">${cnt}</span>
+          </a>`)
           .join("");
+        console.log("TAGS: displayBox оновлено");
       }
 
-      const tagsInput = document.getElementById("mixTagsInput");
-      if (tagsInput) {
-        tagsInput.value = data.tags.join(", ");
-      }
+      exitEditMode();
     });
   }
 
@@ -467,7 +558,41 @@ trackList.addEventListener("dragend", () => {
       }
     });
   }
+// ----- очистити трекліст -----
+  const clearTracklistBtn = document.getElementById("clearTracklistBtn");
+  if (clearTracklistBtn) {
+    clearTracklistBtn.addEventListener("click", async () => {
+      if (!confirm("Ви впевнені? Весь трекліст буде видалено безповоротно.")) return;
 
+      const ids = Array.from(trackList.querySelectorAll("li[data-track-id]"))
+        .map(li => li.dataset.trackId)
+        .filter(Boolean);
+
+      if (ids.length === 0) {
+        alert("Трекліст вже порожній.");
+        return;
+      }
+
+      try {
+        const resp = await fetch(`/mix/${mixId}/delete-tracks`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids })
+        });
+
+        if (!resp.ok) {
+          alert("Не вдалося очистити трекліст");
+          return;
+        }
+
+        trackList.querySelectorAll("li[data-track-id]").forEach(li => li.remove());
+
+      } catch (err) {
+        console.error(err);
+        alert("Помилка очищення");
+      }
+    });
+  }
 
   // ----- escape helpers -----
   function escapeHtml(s) {

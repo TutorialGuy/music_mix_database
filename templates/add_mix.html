@@ -21,18 +21,27 @@
   </p>
 
   <p>
-    YouTube<br>
+    <span class="field-label-icon">
+      <img src="{{ url_for('static', filename='icons/youtube.svg') }}" class="link-icon" alt="YouTube">
+      YouTube
+    </span><br>
     <input name="youtube" value="{{ youtube_value or '' }}" style="width:420px;">
   </p>
 
   <p>
-    SoundCloud<br>
+    <span class="field-label-icon">
+      <img src="{{ url_for('static', filename='icons/soundcloud.svg') }}" class="link-icon" alt="SoundCloud">
+      SoundCloud
+    </span><br>
     <input name="soundcloud" value="{{ soundcloud_value or '' }}" style="width:420px;">
   </p>
 
   <p>
-    Spotify<br>
-  <input name="spotify" value="{{ spotify_value or '' }}" placeholder="Spotify URL">
+    <span class="field-label-icon">
+      <img src="{{ url_for('static', filename='icons/spotify.svg') }}" class="link-icon" alt="Spotify">
+      Spotify
+    </span><br>
+    <input name="spotify" value="{{ spotify_value or '' }}" placeholder="Spotify URL" style="width:420px;">
   </p>
 
   <p>

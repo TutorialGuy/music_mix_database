@@ -9,7 +9,8 @@ from database import (
     set_mix_tags, get_mix_tags,
     get_all_tags_with_counts, delete_tags,
     delete_mix_tracks_bulk, save_track_order,
-    update_mix_duration, get_all_mixes_sorted
+    update_mix_duration, get_all_mixes_sorted,
+    get_mix_tags_with_counts, get_mixes_by_tag
 )
 from utils import (
     slugify, highlight, time_to_seconds,
@@ -43,17 +44,26 @@ app.jinja_env.globals["format_seconds_to_hms"] = format_seconds_to_hms
 @app.route("/", methods=["GET"])
 def home():
     q = request.args.get("q", "").strip()
+    tag = request.args.get("tag", "").strip()
 
     track_results = []
     mix_results = []
 
-    if q:
+    if tag:
+        raw_tag_mixes = get_mixes_by_tag(tag)
+        for mix_id, title, cover, duration_sec in raw_tag_mixes:
+            mix_results.append({
+                "mix_id": mix_id,
+                "title_html": highlight(title, tag),
+                "cover": cover
+            })
+
+    elif q:
         raw_tracks = search_tracks(q)
         for mix_id, mix_title, cover, mix_track_id, artist, title, sc, time_value in raw_tracks:
             track_label = title if not artist else f"{artist} — {title}"
             if time_value:
                 track_label = f"[{time_value}] {track_label}"
-
             track_results.append({
                 "mix_id": mix_id,
                 "mix_title_html": highlight(mix_title, q),
@@ -68,7 +78,7 @@ def home():
                 "cover": cover
             })
 
-    return render_template("home.html", q=q, track_results=track_results, mix_results=mix_results)
+    return render_template("home.html", q=q, tag=tag, track_results=track_results, mix_results=mix_results)
 
 @app.route("/mixes")
 def mixes_page():
@@ -223,8 +233,9 @@ def mix_detail(mix_id):
     # розпаковка міксу
     mix_id_db, mix_title, youtube, sc_mix, spotify, cover, _tags_cache, duration_sec = mix
 
-    tags_list = get_mix_tags(mix_id_db)  # тільки список
-    tags_input = ", ".join(tags_list)  # рядок для input
+    tags_with_counts = get_mix_tags_with_counts(mix_id_db)
+    tags_list = [t[0] for t in tags_with_counts]
+    tags_input = ", ".join(tags_list)
     duration_value = format_seconds_to_hms(duration_sec)
 
     # підготуємо треки для шаблону як dict-об’єкти
@@ -260,7 +271,7 @@ def mix_detail(mix_id):
         cover=cover,
         cover_error_msg=cover_error_msg,
         tracks=tracks,
-        tags=tags_list,
+        tags=tags_with_counts,
         tags_input=tags_input,
         all_tags=all_tags
     )
@@ -299,6 +310,10 @@ def delete_tags_page():
 
     return redirect("/tags")
 
+@app.route("/tag/<tag_name>")
+def tag_page(tag_name):
+    return redirect(f"/?tag={tag_name}")
+
 @app.route("/mix/<int:mix_id>/import-tracks", methods=["POST"])
 def import_tracks(mix_id):
     mix = get_mix_by_id(mix_id)
@@ -334,16 +349,17 @@ def import_tracks(mix_id):
         ok = add_track_to_mix(mix_id, artist, title, soundcloud, time_value)
 
         if ok and artist:
-            artist_tag = artist.lower().strip()
+            artist_tag = f"artist:{artist.lower().strip()}"
             if artist_tag and artist_tag not in imported_artist_tags:
                 imported_artist_tags.append(artist_tag)
 
     if imported_artist_tags:
         current_tags = get_mix_tags(mix_id)
         merged_tags = list(current_tags)
+        merged_lower = [t.lower() for t in merged_tags]
 
         for tag in imported_artist_tags:
-            if tag not in merged_tags:
+            if tag.lower() not in merged_lower:
                 merged_tags.append(tag)
 
         set_mix_tags(mix_id, merged_tags)
@@ -464,7 +480,8 @@ def update_tags(mix_id):
 
     set_mix_tags(mix_id, tags_list)
 
-    return jsonify({"ok": True, "tags": tags_list})
+    tags_with_counts = get_mix_tags_with_counts(mix_id)
+    return jsonify({"ok": True, "tags": tags_with_counts})
 
 @app.route("/mix/<int:mix_id>/update-links", methods=["POST"])
 def update_mix_links_inline(mix_id):

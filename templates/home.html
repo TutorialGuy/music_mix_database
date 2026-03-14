@@ -17,7 +17,27 @@
     {% endif %}
 </form>
 
-{% if q %}
+{% if tag %}
+    <h3>Мікси з тегом: <span class="tag tagDisplay">{{ tag }}</span></h3>
+
+    {% if not mix_results %}
+        <p>Немає міксів з цим тегом.</p>
+    {% else %}
+        <p style="color:var(--text-muted);">Знайдено: {{ mix_results|length }}</p>
+        <ul style="list-style:none; padding:0;">
+            {% for m in mix_results %}
+                <li style="display:flex; align-items:center; margin-bottom:10px;">
+                    {% if m.cover %}
+                        <img src="/{{ m.cover }}"
+                             style="width:60px; height:60px; object-fit:cover; border-radius:8px; margin-right:10px;">
+                    {% endif %}
+                    <a href="/mix/{{ m.mix_id }}"><b>{{ m.title_html|safe }}</b></a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+{% elif q %}
     <h3>Результати для: {{ q }}</h3>
 
     {% if not mix_results and not track_results %}

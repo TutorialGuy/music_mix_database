@@ -175,10 +175,16 @@ def parse_track_line(line: str) -> Optional[tuple[str, str, str, str]]:
             return (artist, title, soundcloud, time_value)
         return None
 
-    # E) Просто текст
-    title = line.strip()
-    if not title:
+    # E) Просто текст — може бути "Artist - Title" або просто "Title"
+    text = line.strip()
+    if not text:
         return None
+    if " - " in text:
+        artist, title = [p.strip() for p in text.split(" - ", 1)]
+    elif " — " in text:
+        artist, title = [p.strip() for p in text.split(" — ", 1)]
+    else:
+        title = text
     return (artist, title, soundcloud, time_value)
 
 def time_to_seconds(t: str) -> int:

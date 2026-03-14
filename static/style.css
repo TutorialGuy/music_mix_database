@@ -31,14 +31,6 @@ a:hover {
     padding: 20px;
 }
 
-.card {
-    background: var(--bg-card);
-    padding: 16px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    margin-bottom: 16px;
-}
-
 button {
     background: var(--bg-secondary);
     color: var(--text-main);
@@ -258,9 +250,26 @@ mark {
   border-top: 1px solid rgba(255,255,255,0.06);
 }
 
+.link-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  vertical-align: middle;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
 .linkLabel {
   color: var(--text-muted);
   font-size: 13px;
+  display: flex;
+  align-items: center;
+}
+
+.field-label-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .linkValue a {
@@ -316,7 +325,6 @@ mark {
 
   width:100%;
   max-width:100%;
-  min-height:48px;
 
   padding:10px 12px;
   margin:8px 0 12px 0;
@@ -332,29 +340,82 @@ mark {
   color: #dbeafe;
 }
 
-.tagsEditForm{
-  display:flex;
-  flex-direction:column;
-  align-items:flex-start;
-  gap:10px;
-  margin-top:8px;
-}
-
-.tagsEditInput{
-  width:100%;
-  box-sizing:border-box;
-}
-
-.tagsSaveBtn{
-  margin-top:0;
-}
-
-.tagsHelp{
-  display:block;
-  color:gray;
-  margin-top:4px;
-}
-
 .sectionSpacer{
   height:14px;
 }
+
+.tag-count {
+  display: inline-block;
+  background: rgba(255,255,255,0.12);
+  border-radius: 6px;
+  padding: 0 5px;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
+.tag-artist {
+    background: #1a2e1a;
+    border-color: #2d5a2d;
+    color: #7ec87e;
+}
+
+.tagsEditBox {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  min-height: 48px;
+  padding: 10px 12px;
+  background: rgba(78, 161, 255, 0.08);
+  border: 1px solid rgba(78, 161, 255, 0.18);
+  border-radius: 10px;
+}
+
+.tagEdit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px 4px 8px;
+}
+
+.tagRemoveBtn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.tagRemoveBtn:hover {
+  color: var(--danger);
+  background: none;
+}
+
+.tagInputWrap {
+  flex: 1;
+  min-width: 120px;
+}
+
+.tagInlineInput {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-main);
+  font-size: 14px;
+  padding: 4px 0;
+}
+
+#clearTracklistBtn {
+  background: rgba(255, 80, 80, 0.14);
+  border-color: rgba(255, 80, 80, 0.25);
+  color: var(--danger);
+}
+
+#clearTracklistBtn:hover {
+  background: rgba(255, 80, 80, 0.25);
+}
+
