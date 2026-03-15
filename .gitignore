@@ -19,6 +19,9 @@ Thumbs.db
 #TXT
 *.txt
 
+#Keys
+*.env
+
 data/
 
 covers/

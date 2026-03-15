@@ -71,6 +71,21 @@ def init_db():
         )
         """)
 
+        cur.execute("""
+                CREATE TABLE IF NOT EXISTS tag_aliases (
+                    alias_name TEXT NOT NULL UNIQUE,
+                    target_name TEXT NOT NULL
+                )
+                """)
+
+        cur.execute("""
+                CREATE TABLE IF NOT EXISTS tag_implications (
+                    tag_name TEXT NOT NULL,
+                    implies_name TEXT NOT NULL,
+                    PRIMARY KEY (tag_name, implies_name)
+                )
+                """)
+
         try:
             cur.execute("ALTER TABLE mixes ADD COLUMN duration_sec INTEGER")
         except sqlite3.OperationalError:
@@ -325,20 +340,20 @@ def get_mix_tags(mix_id: int) -> list[str]:
         return [r[0] for r in cur.fetchall()]
 
 def set_mix_tags(mix_id: int, tags: list[str]) -> None:
-    # 0) нормалізація + прибрати пусті
     clean = []
     seen = set()
     for t in tags:
         if t is None:
             continue
-        name = str(t).strip()
+        name = str(t).strip().lower()
         if not name:
             continue
-        key = name.lower()
-        if key in seen:
-            continue
-        seen.add(key)
-        clean.append(name)
+        if name not in seen:
+            seen.add(name)
+            clean.append(name)
+
+    # застосовуємо аліаси та імплікації
+    clean = apply_aliases_and_implications(clean)
 
     with get_connection() as conn:
         cur = conn.cursor()
@@ -541,3 +556,103 @@ def get_tag_links(min_shared: int = 2):
             ORDER BY shared DESC
         """, (min_shared,))
         return cur.fetchall()
+
+def get_all_aliases():
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT alias_name, target_name FROM tag_aliases ORDER BY alias_name")
+        return cur.fetchall()
+
+def add_alias(alias_name: str, target_name: str) -> None:
+    alias_name = alias_name.strip().lower()
+    target_name = target_name.strip().lower()
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT OR REPLACE INTO tag_aliases (alias_name, target_name)
+            VALUES (?, ?)
+        """, (alias_name, target_name))
+        conn.commit()
+
+def delete_alias(alias_name: str) -> None:
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM tag_aliases WHERE alias_name=?", (alias_name,))
+        conn.commit()
+
+def get_all_implications():
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT tag_name, implies_name FROM tag_implications ORDER BY tag_name")
+        return cur.fetchall()
+
+def add_implication(tag_name: str, implies_name: str) -> None:
+    tag_name = tag_name.strip().lower()
+    implies_name = implies_name.strip().lower()
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT OR IGNORE INTO tag_implications (tag_name, implies_name)
+            VALUES (?, ?)
+        """, (tag_name, implies_name))
+        conn.commit()
+
+def delete_implication(tag_name: str, implies_name: str) -> None:
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            DELETE FROM tag_implications
+            WHERE tag_name=? AND implies_name=?
+        """, (tag_name, implies_name))
+        conn.commit()
+
+def apply_aliases_and_implications(tags: list[str]) -> list[str]:
+    """
+    Приймає список тегів, повертає новий список де:
+    1) аліаси замінені на цільові теги
+    2) імплікації додані автоматично
+    """
+    if not tags:
+        return []
+
+    with get_connection() as conn:
+        cur = conn.cursor()
+
+        cur.execute("SELECT alias_name, target_name FROM tag_aliases")
+        aliases = {row[0]: row[1] for row in cur.fetchall()}
+
+        cur.execute("SELECT tag_name, implies_name FROM tag_implications")
+        implications = {}
+        for tag_name, implies_name in cur.fetchall():
+            implications.setdefault(tag_name, []).append(implies_name)
+
+    result = []
+    seen = set()
+
+    for tag in tags:
+        resolved = aliases.get(tag.lower(), tag.lower())
+        if resolved not in seen:
+            seen.add(resolved)
+            result.append(resolved)
+
+    # додаємо імплікації
+    i = 0
+    while i < len(result):
+        tag = result[i]
+        for implied in implications.get(tag, []):
+            if implied not in seen:
+                seen.add(implied)
+                result.append(implied)
+        i += 1
+
+    return result
+
+def get_all_artists() -> list[str]:
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT name FROM tags
+            WHERE name LIKE 'artist: %'
+            ORDER BY name
+        """)
+        return [row[0].replace("artist: ", "") for row in cur.fetchall()]

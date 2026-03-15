@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Артисти{% endblock %}
+
+{% block content %}
+<h2>🎵 Артисти та їх жанри</h2>
+
+<p>
+  <a href="/" style="margin-right:12px;">🏠 На головну</a>
+  <a href="/tags" style="margin-right:12px;">🏷️ Теги</a>
+  <a href="/tags/relations">🔗 Аліаси та імплікації</a>
+</p>
+
+<p style="color:var(--text-muted); font-size:13px;">
+  Натисни «Last.fm» поряд з артистом щоб підтягнути його жанри автоматично.
+  Жанри зберігаються як імплікації — тег артиста буде автоматично тягнути їх при збереженні міксу.
+</p>
+
+<table style="width:100%; border-collapse:collapse; font-size:14px;">
+  <thead>
+    <tr style="border-bottom:1px solid var(--border); color:var(--text-muted); font-size:12px;">
+      <td style="padding:8px;">Артист</td>
+      <td style="padding:8px;">Жанри (імплікації)</td>
+      <td style="padding:8px; text-align:right;">Last.fm</td>
+    </tr>
+  </thead>
+  <tbody>
+    {% for artist in artists %}
+    <tr style="border-bottom:1px solid var(--border);" id="row-{{ loop.index }}">
+      <td style="padding:8px; white-space:nowrap;">
+        <a href="/tag/artist: {{ artist }}">{{ artist }}</a>
+      </td>
+      <td style="padding:8px;" id="tags-{{ loop.index }}">
+        {% set implied = artist_implications[artist] %}
+        {% if implied %}
+          {% for genre in implied %}
+            <span style="display:inline-flex; align-items:center; gap:4px; margin:2px;">
+              <a href="/tag/{{ genre }}" class="tag" style="font-size:12px; text-decoration:none;">{{ genre }}</a>
+              <button type="button"
+                class="deleteImplicationBtn"
+                data-artist="{{ artist }}"
+                data-implies="{{ genre }}"
+                style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:12px; padding:0 2px;">✕</button>
+            </span>
+          {% endfor %}
+        {% else %}
+          <span style="color:var(--text-muted); font-size:12px;">—</span>
+        {% endif %}
+      </td>
+      <td style="padding:8px; text-align:right;">
+        <button type="button"
+                class="fetchTagsBtn"
+                data-artist="{{ artist }}"
+                data-index="{{ loop.index }}"
+                style="font-size:12px;">
+          ↓ Last.fm
+        </button>
+        <span class="fetchStatus" id="status-{{ loop.index }}" style="font-size:12px; margin-left:6px; color:var(--text-muted);"></span>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<script>
+document.querySelectorAll(".fetchTagsBtn").forEach(btn => {
+  btn.addEventListener("click", async () => {
+    const artist = btn.dataset.artist;
+    const index = btn.dataset.index;
+    const statusEl = document.getElementById(`status-${index}`);
+    const tagsEl = document.getElementById(`tags-${index}`);
+
+    btn.disabled = true;
+    statusEl.textContent = "завантаження...";
+
+    try {
+      const resp = await fetch(`/artists/fetch-tags/${encodeURIComponent(artist)}`, {
+        method: "POST"
+      });
+      const data = await resp.json();
+
+      if (data.ok) {
+        statusEl.textContent = "✅";
+        // оновлюємо відображення тегів без перезавантаження
+        tagsEl.innerHTML = data.tags.map(tag =>
+          `<span style="display:inline-flex; align-items:center; gap:4px; margin:2px;">
+            <a href="/tag/${encodeURIComponent(tag)}" class="tag" style="font-size:12px; text-decoration:none;">${tag}</a>
+            <button type="button"
+                    class="deleteImplicationBtn"
+                    data-artist="${artist}"
+                    data-implies="${tag}"
+                    style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:12px; padding:0 2px;">✕</button>
+          </span>`
+        ).join("");
+      } else {
+        statusEl.textContent = `❌ ${data.error}`;
+        btn.disabled = false;
+      }
+    } catch (err) {
+      statusEl.textContent = "❌ помилка";
+      btn.disabled = false;
+    }
+  });
+});
+
+  document.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".deleteImplicationBtn");
+  if (!btn) return;
+
+  const artist = btn.dataset.artist;
+  const implies = btn.dataset.implies;
+  const span = btn.closest("span");
+
+  const fd = new FormData();
+  fd.append("artist", artist);
+  fd.append("implies", implies);
+
+  try {
+    const resp = await fetch("/artists/delete-implication", {
+      method: "POST",
+      body: fd
+    });
+    const data = await resp.json();
+    if (data.ok && span) {
+      span.remove();
+    }
+  } catch (err) {
+    console.error("Помилка видалення імплікації", err);
+  }
+});
+
+</script>
+{% endblock %}

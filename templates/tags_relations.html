@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Аліаси та імплікації тегів{% endblock %}
+
+{% block content %}
+<h2>🔗 Аліаси та імплікації тегів</h2>
+
+<p>
+  <a href="/" style="margin-right:12px;">🏠 На головну</a>
+  <a href="/tags">🏷️ Всі теги</a>
+</p>
+
+{% if error_msg %}
+  <p style="color:var(--danger);"><b>{{ error_msg }}</b></p>
+{% endif %}
+{% if success_msg %}
+  <p style="color:#5a9;"><b>{{ success_msg }}</b></p>
+{% endif %}
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:2rem; margin-top:1rem;">
+
+  <!-- Аліаси -->
+  <div>
+    <h3>Аліаси</h3>
+    <p style="color:var(--text-muted); font-size:13px;">
+      Аліас автоматично замінюється на цільовий тег при збереженні.
+      Наприклад: <i>dnb → drum and bass</i>
+    </p>
+
+    <form method="post" style="display:flex; gap:8px; margin-bottom:16px; align-items:center;">
+      <input type="hidden" name="action" value="add_alias">
+      <input name="alias_name" placeholder="аліас (напр. dnb)" style="width:160px;">
+      <span style="color:var(--text-muted);">→</span>
+      <input name="target_name" placeholder="цільовий тег" style="width:160px;">
+      <button type="submit">Додати</button>
+    </form>
+
+    {% if aliases %}
+    <table style="width:100%; font-size:13px; border-collapse:collapse;">
+      {% for alias, target in aliases %}
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:6px 8px;">
+          <span class="tag" style="font-size:12px;">{{ alias }}</span>
+        </td>
+        <td style="padding:6px 4px; color:var(--text-muted);">→</td>
+        <td style="padding:6px 8px;">
+          <span class="tag tagDisplay" style="font-size:12px;">{{ target }}</span>
+        </td>
+        <td style="padding:6px 8px; text-align:right;">
+          <form method="post" style="display:inline;">
+            <input type="hidden" name="action" value="delete_alias">
+            <input type="hidden" name="alias_name" value="{{ alias }}">
+            <button type="submit" style="color:var(--danger); background:none; border:none; cursor:pointer; font-size:13px;">✕</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+      <p style="color:var(--text-muted);">Аліасів ще немає.</p>
+    {% endif %}
+  </div>
+
+  <!-- Імплікації -->
+  <div>
+    <h3>Імплікації</h3>
+    <p style="color:var(--text-muted); font-size:13px;">
+      При додаванні тегу автоматично додається пов'язаний.
+      Наприклад: <i>neurofunk → drum and bass</i>
+    </p>
+
+    <form method="post" style="display:flex; gap:8px; margin-bottom:16px; align-items:center;">
+      <input type="hidden" name="action" value="add_implication">
+      <input name="tag_name" placeholder="піджанр (напр. neurofunk)" style="width:160px;">
+      <span style="color:var(--text-muted);">→</span>
+      <input name="implies_name" placeholder="батьківський тег" style="width:160px;">
+      <button type="submit">Додати</button>
+    </form>
+
+    {% if implications %}
+    <table style="width:100%; font-size:13px; border-collapse:collapse;">
+      {% for tag, implies in implications %}
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:6px 8px;">
+          <span class="tag" style="font-size:12px;">{{ tag }}</span>
+        </td>
+        <td style="padding:6px 4px; color:var(--text-muted);">→</td>
+        <td style="padding:6px 8px;">
+          <span class="tag tagDisplay" style="font-size:12px;">{{ implies }}</span>
+        </td>
+        <td style="padding:6px 8px; text-align:right;">
+          <form method="post" style="display:inline;">
+            <input type="hidden" name="action" value="delete_implication">
+            <input type="hidden" name="tag_name" value="{{ tag }}">
+            <input type="hidden" name="implies_name" value="{{ implies }}">
+            <button type="submit" style="color:var(--danger); background:none; border:none; cursor:pointer; font-size:13px;">✕</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+      <p style="color:var(--text-muted);">Імплікацій ще немає.</p>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

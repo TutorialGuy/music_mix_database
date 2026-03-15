@@ -11,7 +11,10 @@ from database import (
     delete_mix_tracks_bulk, save_track_order,
     update_mix_duration, get_all_mixes_sorted,
     get_mix_tags_with_counts, get_mixes_by_tag,
-    get_stats, get_recent_mixes, get_random_mix, get_all_tags_for_bubbles, get_tag_links
+    get_stats, get_recent_mixes, get_random_mix, get_all_tags_for_bubbles, get_tag_links,
+    get_all_aliases, add_alias, delete_alias,
+    get_all_implications, add_implication, delete_implication,
+    get_all_artists
 )
 from utils import (
     slugify, highlight, time_to_seconds,
@@ -22,6 +25,10 @@ import os
 import time
 from werkzeug.utils import secure_filename
 from PIL import Image
+import requests
+from dotenv import load_dotenv
+load_dotenv()
+LASTFM_API_KEY = os.getenv("LASTFM_API_KEY")
 
 
 app = Flask(__name__)
@@ -311,6 +318,62 @@ def tags_page():
     tags = [{"id": r[0], "name": r[1], "cnt": r[2]} for r in rows]
     return render_template("tags.html", tags=tags)
 
+@app.route("/tags/relations", methods=["GET", "POST"])
+def tags_relations():
+    error_msg = ""
+    success_msg = ""
+
+    if request.method == "POST":
+        action = request.form.get("action", "")
+
+        if action == "add_alias":
+            alias = request.form.get("alias_name", "").strip().lower()
+            target = request.form.get("target_name", "").strip().lower()
+            if alias and target:
+                if alias == target:
+                    error_msg = "❌ Аліас і цільовий тег не можуть бути однаковими."
+                else:
+                    add_alias(alias, target)
+                    success_msg = f"✅ Аліас «{alias}» → «{target}» додано."
+            else:
+                error_msg = "❌ Заповни обидва поля."
+
+        elif action == "delete_alias":
+            alias = request.form.get("alias_name", "").strip()
+            if alias:
+                delete_alias(alias)
+                success_msg = f"✅ Аліас «{alias}» видалено."
+
+        elif action == "add_implication":
+            tag = request.form.get("tag_name", "").strip().lower()
+            implies = request.form.get("implies_name", "").strip().lower()
+            if tag and implies:
+                if tag == implies:
+                    error_msg = "❌ Тег і імплікація не можуть бути однаковими."
+                else:
+                    add_implication(tag, implies)
+                    success_msg = f"✅ Імплікація «{tag}» → «{implies}» додана."
+            else:
+                error_msg = "❌ Заповни обидва поля."
+
+        elif action == "delete_implication":
+            tag = request.form.get("tag_name", "").strip()
+            implies = request.form.get("implies_name", "").strip()
+            if tag and implies:
+                delete_implication(tag, implies)
+                success_msg = f"✅ Імплікацію «{tag}» → «{implies}» видалено."
+
+    aliases = get_all_aliases()
+    implications = get_all_implications()
+
+    return render_template(
+        "tags_relations.html",
+        aliases=aliases,
+        implications=implications,
+        error_msg=error_msg,
+        success_msg=success_msg
+    )
+
 @app.route("/tags/bubbles")
 def tags_bubbles():
     tags = get_all_tags_for_bubbles()
@@ -344,6 +407,75 @@ def delete_tags_page():
 @app.route("/tag/<tag_name>")
 def tag_page(tag_name):
     return redirect(f"/?tag={tag_name}")
+
+@app.route("/artists", methods=["GET"])
+def artists_page():
+    artists = get_all_artists()
+
+    # для кожного артиста збираємо його поточні імплікації
+    all_implications = get_all_implications()
+    artist_implications = {}
+    for artist in artists:
+        tag_name = f"artist: {artist}"
+        implied = [imp for tag, imp in all_implications if tag == tag_name]
+        artist_implications[artist] = implied
+
+    return render_template(
+        "artists.html",
+        artists=artists,
+        artist_implications=artist_implications
+    )
+
+@app.route("/artists/fetch-tags/<path:artist_name>", methods=["POST"])
+def fetch_artist_tags(artist_name):
+    import os
+    print("DEBUG API KEY:", repr(os.getenv("LASTFM_API_KEY")))
+    print("DEBUG LASTFM_API_KEY var:", repr(LASTFM_API_KEY))
+    if not LASTFM_API_KEY:
+        return jsonify({"ok": False, "error": "API ключ не знайдено"}), 500
+
+    try:
+        resp = requests.get("https://ws.audioscrobbler.com/2.0/", params={
+            "method": "artist.gettoptags",
+            "artist": artist_name,
+            "api_key": LASTFM_API_KEY,
+            "format": "json"
+        }, timeout=10)
+        data = resp.json()
+
+        if "toptags" not in data or "tag" not in data["toptags"]:
+            return jsonify({"ok": False, "error": "Артиста не знайдено на Last.fm"}), 404
+
+        raw_tags = data["toptags"]["tag"][:5]
+        tag_names = [t["name"].strip().lower() for t in raw_tags]
+
+        # пропускаємо через аліаси
+        with __import__('sqlite3').connect('music.db') as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT alias_name, target_name FROM tag_aliases")
+            aliases = {row[0]: row[1] for row in cur.fetchall()}
+
+        resolved = [aliases.get(t, t) for t in tag_names]
+
+        # зберігаємо як імплікації для тегу артиста
+        artist_tag = f"artist: {artist_name.lower().strip()}"
+        for genre in resolved:
+            add_implication(artist_tag, genre)
+
+        return jsonify({"ok": True, "tags": resolved})
+
+    except requests.RequestException as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.route("/artists/delete-implication", methods=["POST"])
+def delete_artist_implication():
+    artist = request.form.get("artist", "").strip()
+    implies = request.form.get("implies", "").strip()
+    if artist and implies:
+        artist_tag = f"artist: {artist}"
+        delete_implication(artist_tag, implies)
+        return jsonify({"ok": True})
+    return jsonify({"ok": False}), 400
 
 @app.route("/mix/<int:mix_id>/import-tracks", methods=["POST"])
 def import_tracks(mix_id):
