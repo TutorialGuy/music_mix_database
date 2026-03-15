@@ -365,7 +365,7 @@ def import_tracks(mix_id):
         ok = add_track_to_mix(mix_id, artist, title, soundcloud, time_value)
 
         if ok and artist:
-            artist_tag = f"artist:{artist.lower().strip()}"
+            artist_tag = f"artist: {artist.lower().strip()}"
             if artist_tag and artist_tag not in imported_artist_tags:
                 imported_artist_tags.append(artist_tag)
 

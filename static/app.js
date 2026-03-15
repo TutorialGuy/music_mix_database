@@ -285,7 +285,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (displayBox) {
         displayBox.innerHTML = data.tags
           .map(([name, cnt]) => `<a href="/tag/${encodeURIComponent(name)}"
-            class="tag tagDisplay${name.startsWith("artist:") ? " tag-artist" : ""}"
+            class="tag tagDisplay${name.startsWith("artist: ") ? " tag-artist" : ""}"
             style="text-decoration:none;"
             data-tag="${escapeAttr(name)}">
             ${escapeHtml(name)} <span class="tag-count">${cnt}</span>

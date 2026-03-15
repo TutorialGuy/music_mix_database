@@ -87,7 +87,7 @@
   <div class="tagsDisplayBox" id="tagsDisplayBox">
     {% for tag, cnt in tags %}
       <a href="/tag/{{ tag }}"
-         class="tag tagDisplay {% if tag.startswith('artist:') %}tag-artist{% endif %}"
+         class="tag tagDisplay {% if tag.startswith('artist: ') %}tag-artist{% endif %}"
          style="text-decoration:none;">
         {{ tag }}
         <span class="tag-count">{{ cnt }}</span>
@@ -105,7 +105,7 @@
     <form id="tagsForm" action="/mix/{{ mix_id }}/update-tags" method="post">
       <div class="tagsEditBox" id="tagsEditBox">
         {% for tag, cnt in tags %}
-          <span class="tag tagEdit {% if tag.startswith('artist:') %}tag-artist{% endif %}"
+          <span class="tag tagEdit {% if tag.startswith('artist: ') %}tag-artist{% endif %}"
                 data-tag="{{ tag }}">
             {{ tag }}
             <button type="button" class="tagRemoveBtn" data-tag="{{ tag }}">×</button>
