@@ -26,106 +26,128 @@
     <a href="/mixes">📚 Список міксів</a> ·
     <a href="/add-mix">➕ Додати мікс</a> ·
     <a href="/tags">🏷️ Теги</a>
-    {% if random_mix %}
-      · <a href="/mix/{{ random_mix[0] }}">🎲 Випадковий мікс</a>
-    {% endif %}
 </p>
 
 <hr style="margin:16px 0;">
 
-<!-- Пошук -->
-<h3>Пошук</h3>
-<form method="get" action="/">
-    <input name="q" value="{{ q }}"
-           placeholder="Назва треку, артист або мікс..."
-           style="width:420px;padding:6px;">
-    <button type="submit">Пошук</button>
-    {% if q %}
-        <a href="/" style="margin-left:10px;">Очистити</a>
-    {% endif %}
-</form>
+<div style="display:grid; grid-template-columns:1fr 400px; gap:2rem; align-items:start;">
 
-<!-- Результати пошуку -->
-{% if tag %}
-    <h3>Мікси з тегом: <span class="tag tagDisplay">{{ tag }}</span></h3>
-    {% if not mix_results %}
-        <p>Немає міксів з цим тегом.</p>
-    {% else %}
-        <p style="color:var(--text-muted);">Знайдено: {{ mix_results|length }}</p>
-        <ul style="list-style:none; padding:0;">
-            {% for m in mix_results %}
-                <li style="display:flex; align-items:center; margin-bottom:10px;">
-                    {% if m.cover %}
-                        <img src="/{{ m.cover }}"
-                             style="width:60px; height:60px; object-fit:cover; border-radius:8px; margin-right:10px;">
-                    {% endif %}
-                    <a href="/mix/{{ m.mix_id }}"><b>{{ m.title_html|safe }}</b></a>
-                </li>
-            {% endfor %}
-        </ul>
-    {% endif %}
+  <!-- Ліва колонка -->
+  <div>
+    <h3>Пошук</h3>
+    <form method="get" action="/">
+        <input name="q" value="{{ q }}"
+               placeholder="Назва треку, артист або мікс..."
+               style="width:100%; max-width:420px; padding:6px; box-sizing:border-box;">
+        <button type="submit" style="margin-left:6px;">Пошук</button>
+        {% if q %}
+            <a href="/" style="margin-left:10px;">Очистити</a>
+        {% endif %}
+    </form>
 
-{% elif q %}
-    <h3>Результати для: {{ q }}</h3>
-    {% if not mix_results and not track_results %}
-        <p>Нічого не знайдено.</p>
-    {% else %}
-        {% if mix_results %}
-            <h4>Мікси</h4>
-            <ul style="list-style:none;padding-left:0;">
+    {% if tag %}
+        <h3 style="margin-top:20px;">Мікси з тегом: <span class="tag tagDisplay">{{ tag }}</span></h3>
+        {% if not mix_results %}
+            <p>Немає міксів з цим тегом.</p>
+        {% else %}
+            <p style="color:var(--text-muted);">Знайдено: {{ mix_results|length }}</p>
+            <ul style="list-style:none; padding:0;">
                 {% for m in mix_results %}
-                    <li style="display:flex;align-items:center;margin-bottom:10px;">
+                    <li style="display:flex; align-items:center; margin-bottom:10px;">
                         {% if m.cover %}
                             <img src="/{{ m.cover }}"
-                                 style="width:48px;height:48px;object-fit:cover;border-radius:8px;margin-right:10px;">
+                                 style="width:60px; height:60px; object-fit:cover; border-radius:8px; margin-right:10px;">
                         {% endif %}
                         <a href="/mix/{{ m.mix_id }}"><b>{{ m.title_html|safe }}</b></a>
                     </li>
                 {% endfor %}
             </ul>
         {% endif %}
-        {% if track_results %}
-            <h4>Треки</h4>
-            <ul>
-                {% for r in track_results %}
-                    <li style="margin-bottom:8px;">
-                        <b>{{ r.track_label_html|safe }}</b><br>
-                        у міксі: <a href="/mix/{{ r.mix_id }}">{{ r.mix_title_html|safe }}</a>
-                    </li>
-                {% endfor %}
-            </ul>
+
+    {% elif q %}
+        <h3 style="margin-top:20px;">Результати для: {{ q }}</h3>
+        {% if not mix_results and not track_results %}
+            <p>Нічого не знайдено.</p>
+        {% else %}
+            {% if mix_results %}
+                <h4>Мікси</h4>
+                <ul style="list-style:none;padding-left:0;">
+                    {% for m in mix_results %}
+                        <li style="display:flex;align-items:center;margin-bottom:10px;">
+                            {% if m.cover %}
+                                <img src="/{{ m.cover }}"
+                                     style="width:48px;height:48px;object-fit:cover;border-radius:8px;margin-right:10px;">
+                            {% endif %}
+                            <a href="/mix/{{ m.mix_id }}"><b>{{ m.title_html|safe }}</b></a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+            {% if track_results %}
+                <h4>Треки</h4>
+                <ul>
+                    {% for r in track_results %}
+                        <li style="margin-bottom:8px;">
+                            <b>{{ r.track_label_html|safe }}</b><br>
+                            у міксі: <a href="/mix/{{ r.mix_id }}">{{ r.mix_title_html|safe }}</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endif %}
+
+    {% else %}
+        {% if recent_mixes %}
+        <h3 style="margin-top:20px;">Останні додані</h3>
+        <ul style="list-style:none; padding:0;">
+            {% for mix in recent_mixes %}
+                <li style="display:flex; align-items:center; margin-bottom:10px;">
+                    <div style="min-width:90px; color:var(--text-muted); font-size:12px; margin-right:12px;">
+                        {% if mix.added_at %}
+                            {{ mix.added_at[:10] }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </div>
+                    {% if mix.cover %}
+                        <img src="/{{ mix.cover }}"
+                             style="width:48px; height:48px; object-fit:cover; border-radius:8px; margin-right:12px;">
+                    {% endif %}
+                    <div>
+                        <a href="/mix/{{ mix.id }}"><b>{{ mix.title }}</b></a>
+                        {% if mix.duration_sec %}
+                            <div style="color:var(--text-muted); font-size:13px; margin-top:2px;">
+                                ⏱ {{ format_seconds_to_hms(mix.duration_sec) }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
         {% endif %}
     {% endif %}
+  </div>
 
-{% else %}
-    <!-- Останні мікси (тільки коли немає пошуку) -->
-    {% if recent_mixes %}
-    <h3 style="margin-top:20px;">Останні додані</h3>
-    <ul style="list-style:none; padding:0;">
-        {% for mix in recent_mixes %}
-            <li style="display:flex; align-items:center; margin-bottom:10px;">
-                <div style="min-width:90px; color:var(--text-muted); font-size:12px; margin-right:12px;">
-                    {% if mix.added_at %}
-                        {{ mix.added_at[:10] }}
-                    {% else %}
-                        —
-                    {% endif %}
-                </div>
-                {% if mix.cover %}
-                    <img src="/{{ mix.cover }}"
-                         style="width:60px; height:60px; object-fit:cover; border-radius:8px; margin-right:12px;">
-                {% endif %}
-                <div>
-                    <a href="/mix/{{ mix.id }}"><b>{{ mix.title }}</b></a>
-                    {% if mix.duration_sec %}
-                        <span style="color:var(--text-muted); margin-left:8px;">
-                            ⏱ {{ format_seconds_to_hms(mix.duration_sec) }}
-                        </span>
-                    {% endif %}
-                </div>
-            </li>
-        {% endfor %}
-    </ul>
+  <!-- Права колонка — випадковий мікс -->
+  {% if random_mix %}
+  <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow:hidden;">
+    {% if random_mix[2] %}
+      <a href="/mix/{{ random_mix[0] }}">
+        <img src="/{{ random_mix[2] }}" alt="cover"
+             style="width:100%; aspect-ratio:16/9; object-fit:cover; display:block;">
+      </a>
+    {% else %}
+      <a href="/mix/{{ random_mix[0] }}"
+         style="display:block; width:100%; aspect-ratio:16/9; background:var(--bg-secondary); display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:13px; text-decoration:none;">
+        немає обкладинки
+      </a>
     {% endif %}
-{% endif %}
+    <div style="padding:10px 12px;">
+      <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">Випадковий мікс</div>
+      <a href="/mix/{{ random_mix[0] }}" style="font-size:14px; font-weight:500;">{{ random_mix[1] }}</a>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
 {% endblock %}
