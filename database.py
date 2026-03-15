@@ -475,6 +475,7 @@ def save_track_order(mix_id: int, ids: list[int]) -> None:
         conn.commit()
 
 ensure_spotify_column()
+
 # додаємо краси на головну
 def get_stats() -> dict:
     with get_connection() as conn:
@@ -512,3 +513,31 @@ def get_random_mix():
             LIMIT 1
         """)
         return cur.fetchone()
+#Bubbles
+def get_all_tags_for_bubbles():
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT t.name, COUNT(DISTINCT mt.mix_id) as cnt
+            FROM tags t
+            LEFT JOIN mix_tags mt ON mt.tag_id = t.id
+            GROUP BY t.id, t.name
+            HAVING cnt > 0
+            ORDER BY cnt DESC
+        """)
+        return cur.fetchall()
+
+def get_tag_links(min_shared: int = 2):
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT t1.name, t2.name, COUNT(*) as shared
+            FROM mix_tags mt1
+            JOIN mix_tags mt2 ON mt1.mix_id = mt2.mix_id AND mt1.tag_id < mt2.tag_id
+            JOIN tags t1 ON t1.id = mt1.tag_id
+            JOIN tags t2 ON t2.id = mt2.tag_id
+            GROUP BY t1.name, t2.name
+            HAVING shared >= ?
+            ORDER BY shared DESC
+        """, (min_shared,))
+        return cur.fetchall()

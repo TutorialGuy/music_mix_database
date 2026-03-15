@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Карта тегів{% endblock %}
+
+{% block content %}
+<h2>🫧 Карта тегів</h2>
+
+<p>
+  <a href="/" style="margin-right:12px;">🏠 На головну</a>
+  <a href="/mixes" style="margin-right:12px;">📚 Список міксів</a>
+  <a href="/tags">🏷️ Всі теги</a>
+</p>
+
+<div id="tooltip" style="position:fixed; display:none; background:rgba(0,0,0,0.75); color:#fff; padding:6px 10px; border-radius:6px; font-size:13px; pointer-events:none; z-index:100;"></div>
+
+<div id="graph" style="width:100%; height:700px; border-radius:12px; background:var(--bg-secondary); overflow:hidden;"></div>
+
+<script id="tagsJson" type="application/json">{{ tags_data | tojson }}</script>
+<script id="linksJson" type="application/json">{{ links_data | tojson }}</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+const nodes = JSON.parse(document.getElementById("tagsJson").textContent);
+const links = JSON.parse(document.getElementById("linksJson").textContent);
+const tooltip = document.getElementById("tooltip");
+
+const container = document.getElementById("graph");
+const W = container.clientWidth;
+const H = container.clientHeight;
+
+const maxCnt = Math.max(...nodes.map(n => n.cnt));
+const minR = 10, maxR = 60;
+
+nodes.forEach(n => {
+  n.r = minR + (n.cnt / maxCnt) * (maxR - minR);
+  n.isArtist = n.name.startsWith("artist: ");
+});
+
+const svg = d3.select("#graph")
+  .append("svg")
+  .attr("width", W)
+  .attr("height", H);
+
+const maxShared = Math.max(...links.map(l => l.value), 1);
+
+const sim = d3.forceSimulation(nodes)
+  .force("link", d3.forceLink(links)
+    .id(d => d.id)
+    .distance(d => Math.max(20, 120 - d.value * 8))
+    .strength(d => Math.min(0.8, d.value / maxShared))
+  )
+  .force("charge", d3.forceManyBody()
+    .strength(d => -Math.pow(d.r, 1.6))
+  )
+  .force("collision", d3.forceCollide().radius(d => d.r + 4))
+  .force("x", d3.forceX(W / 2).strength(0.04))
+  .force("y", d3.forceY(H / 2).strength(0.04));
+
+const link = svg.append("g")
+  .selectAll("line")
+  .data(links)
+  .join("line")
+  .attr("stroke", "rgba(255,255,255,0.06)")
+  .attr("stroke-width", d => Math.min(3, d.value * 0.5));
+
+const node = svg.append("g")
+  .selectAll("g")
+  .data(nodes)
+  .join("g")
+  .style("cursor", "pointer")
+  .call(d3.drag()
+    .on("start", (e, d) => {
+      if (!e.active) sim.alphaTarget(0.3).restart();
+      d.fx = d.x; d.fy = d.y;
+    })
+    .on("drag", (e, d) => { d.fx = e.x; d.fy = e.y; })
+    .on("end", (e, d) => {
+      if (!e.active) sim.alphaTarget(0);
+      d.fx = null; d.fy = null;
+    })
+  );
+
+node.append("circle")
+  .attr("r", d => d.r)
+  .attr("fill", d => d.isArtist ? "rgba(45,90,45,0.9)" : "rgba(36,52,71,0.9)")
+  .attr("stroke", d => d.isArtist ? "#3a7a3a" : "#355070")
+  .attr("stroke-width", 1.5);
+
+node.append("text")
+  .attr("text-anchor", "middle")
+  .attr("dominant-baseline", "middle")
+  .attr("fill", d => d.isArtist ? "#7ec87e" : "#dbeafe")
+  .attr("font-size", d => Math.max(9, Math.min(12, d.r * 0.3)))
+  .attr("font-family", "system-ui, sans-serif")
+  .attr("pointer-events", "none")
+  .each(function(d) {
+    const label = d.isArtist ? d.name.replace("artist: ", "") : d.name;
+    const words = label.split(" ");
+    const fontSize = Math.max(9, Math.min(12, d.r * 0.3));
+    const maxW = d.r * 1.7;
+    const el = d3.select(this);
+    if (words.length > 1 && label.length * fontSize * 0.55 > maxW) {
+      const mid = Math.ceil(words.length / 2);
+      el.append("tspan").attr("x", 0).attr("dy", -fontSize * 0.6).text(words.slice(0, mid).join(" "));
+      el.append("tspan").attr("x", 0).attr("dy", fontSize * 1.2).text(words.slice(mid).join(" "));
+    } else {
+      el.text(label);
+    }
+  });
+
+node.on("mousemove", (e, d) => {
+  tooltip.style.display = "block";
+  tooltip.style.left = (e.clientX + 14) + "px";
+  tooltip.style.top = (e.clientY - 30) + "px";
+  tooltip.textContent = `${d.name} · ${d.cnt} міксів`;
+})
+.on("mouseleave", () => tooltip.style.display = "none")
+.on("click", (e, d) => {
+  window.location.href = "/tag/" + encodeURIComponent(d.name);
+});
+
+sim.on("tick", () => {
+  nodes.forEach(d => {
+    d.x = Math.max(d.r, Math.min(W - d.r, d.x));
+    d.y = Math.max(d.r, Math.min(H - d.r, d.y));
+  });
+  link
+    .attr("x1", d => d.source.x).attr("y1", d => d.source.y)
+    .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+  node.attr("transform", d => `translate(${d.x},${d.y})`);
+});
+</script>
+{% endblock %}

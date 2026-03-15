@@ -11,7 +11,7 @@ from database import (
     delete_mix_tracks_bulk, save_track_order,
     update_mix_duration, get_all_mixes_sorted,
     get_mix_tags_with_counts, get_mixes_by_tag,
-    get_stats, get_recent_mixes, get_random_mix
+    get_stats, get_recent_mixes, get_random_mix, get_all_tags_for_bubbles, get_tag_links
 )
 from utils import (
     slugify, highlight, time_to_seconds,
@@ -310,6 +310,21 @@ def tags_page():
     rows = get_all_tags_with_counts()
     tags = [{"id": r[0], "name": r[1], "cnt": r[2]} for r in rows]
     return render_template("tags.html", tags=tags)
+
+@app.route("/tags/bubbles")
+def tags_bubbles():
+    tags = get_all_tags_for_bubbles()
+    tags_data = [{"id": i, "name": t[0], "cnt": t[1]} for i, t in enumerate(tags)]
+    name_to_id = {t["name"]: t["id"] for t in tags_data}
+
+    raw_links = get_tag_links(min_shared=2)
+    links_data = [
+        {"source": name_to_id[a], "target": name_to_id[b], "value": shared}
+        for a, b, shared in raw_links
+        if a in name_to_id and b in name_to_id
+    ]
+
+    return render_template("tags_bubbles.html", tags_data=tags_data, links_data=links_data)
 
 @app.route("/tags/delete", methods=["POST"])
 def delete_tags_page():
