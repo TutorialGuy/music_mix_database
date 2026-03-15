@@ -10,7 +10,8 @@ from database import (
     get_all_tags_with_counts, delete_tags,
     delete_mix_tracks_bulk, save_track_order,
     update_mix_duration, get_all_mixes_sorted,
-    get_mix_tags_with_counts, get_mixes_by_tag
+    get_mix_tags_with_counts, get_mixes_by_tag,
+    get_stats, get_recent_mixes, get_random_mix
 )
 from utils import (
     slugify, highlight, time_to_seconds,
@@ -78,7 +79,22 @@ def home():
                 "cover": cover
             })
 
-    return render_template("home.html", q=q, tag=tag, track_results=track_results, mix_results=mix_results)
+    stats = get_stats()
+    recent_mixes = [
+        {"id": m[0], "title": m[1], "cover": m[2], "duration_sec": m[3], "added_at": m[4]}
+        for m in get_recent_mixes(5)
+    ]
+    random_mix = get_random_mix()
+
+    return render_template(
+        "home.html",
+        q=q, tag=tag,
+        track_results=track_results,
+        mix_results=mix_results,
+        stats=stats,
+        recent_mixes=recent_mixes,
+        random_mix=random_mix
+    )
 
 @app.route("/mixes")
 def mixes_page():

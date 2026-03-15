@@ -14,14 +14,22 @@ def init_db():
         cur = conn.cursor()
 
         cur.execute("""
-        CREATE TABLE IF NOT EXISTS mixes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            youtube TEXT,
-            soundcloud TEXT,
-            cover TEXT
-        )
-        """)
+                CREATE TABLE IF NOT EXISTS mixes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    youtube TEXT,
+                    soundcloud TEXT,
+                    cover TEXT
+                )
+                """)
+        try:
+            cur.execute("""
+                                ALTER TABLE mixes ADD COLUMN added_at TEXT
+                                DEFAULT (datetime('now', 'localtime'))
+                            """)
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass
 
         cur.execute("""
         CREATE TABLE IF NOT EXISTS tracks (
@@ -467,3 +475,40 @@ def save_track_order(mix_id: int, ids: list[int]) -> None:
         conn.commit()
 
 ensure_spotify_column()
+# додаємо краси на головну
+def get_stats() -> dict:
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM mixes")
+        mixes_count = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM mix_tracks")
+        tracks_count = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM tags")
+        tags_count = cur.fetchone()[0]
+        return {
+            "mixes": mixes_count,
+            "tracks": tracks_count,
+            "tags": tags_count
+        }
+
+def get_recent_mixes(limit: int = 5):
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id, title, cover, duration_sec, added_at
+            FROM mixes
+            ORDER BY id DESC
+            LIMIT ?
+        """, (limit,))
+        return cur.fetchall()
+
+def get_random_mix():
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id, title, cover
+            FROM mixes
+            ORDER BY RANDOM()
+            LIMIT 1
+        """)
+        return cur.fetchone()
