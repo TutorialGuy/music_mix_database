@@ -14,7 +14,7 @@ from database import (
     get_stats, get_recent_mixes, get_random_mix, get_all_tags_for_bubbles, get_tag_links,
     get_all_aliases, add_alias, delete_alias,
     get_all_implications, add_implication, delete_implication,
-    get_all_artists
+    get_all_artists, mark_artist_lastfm_fetched, get_artists_lastfm_fetched
 )
 from utils import (
     slugify, highlight, time_to_seconds,
@@ -420,10 +420,12 @@ def artists_page():
         implied = [imp for tag, imp in all_implications if tag == tag_name]
         artist_implications[artist] = implied
 
+    fetched = get_artists_lastfm_fetched()
     return render_template(
         "artists.html",
         artists=artists,
-        artist_implications=artist_implications
+        artist_implications=artist_implications,
+        lastfm_fetched=fetched
     )
 
 @app.route("/artists/fetch-tags/<path:artist_name>", methods=["POST"])
@@ -444,6 +446,7 @@ def fetch_artist_tags(artist_name):
         data = resp.json()
 
         if "toptags" not in data or "tag" not in data["toptags"]:
+            mark_artist_lastfm_fetched(artist_name)
             return jsonify({"ok": False, "error": "Артиста не знайдено на Last.fm"}), 404
 
         raw_tags = data["toptags"]["tag"][:5]
@@ -462,6 +465,7 @@ def fetch_artist_tags(artist_name):
         for genre in resolved:
             add_implication(artist_tag, genre)
 
+        mark_artist_lastfm_fetched(artist_name)
         return jsonify({"ok": True, "tags": resolved})
 
     except requests.RequestException as e:

@@ -59,11 +59,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function alreadyUsedTags() {
-      return input.value
-        .split(",")
-        .map(s => s.trim().toLowerCase())
-        .filter(Boolean);
-    }
+  const caret = input.selectionStart ?? input.value.length;
+  const beforeCaret = input.value.slice(0, caret);
+  const lastComma = beforeCaret.lastIndexOf(",");
+  const currentToken = (lastComma >= 0
+    ? beforeCaret.slice(lastComma + 1)
+    : beforeCaret).trim().toLowerCase();
+
+  return input.value
+    .split(",")
+    .map(s => s.trim().toLowerCase())
+    .filter(s => s && s !== currentToken);
+}
 
     function applyTag(tagName) {
       const value = input.value;

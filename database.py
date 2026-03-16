@@ -91,6 +91,11 @@ def init_db():
         except sqlite3.OperationalError:
             pass
 
+        try:
+            cur.execute("ALTER TABLE tags ADD COLUMN lastfm_fetched INTEGER DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass
+
         conn.commit()
 
 def ensure_spotify_column():
@@ -113,10 +118,13 @@ def add_mix(title: str, youtube: str, soundcloud: str, spotify: str, cover: str 
 
     with get_connection() as conn:
         cur = conn.cursor()
+        from datetime import datetime
+        added_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
         cur.execute("""
-            INSERT INTO mixes (title, youtube, soundcloud, spotify, cover, tags, duration_sec)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (title, youtube_db, soundcloud_db, spotify_db, cover_db, tags_db, duration_sec))
+                    INSERT INTO mixes (title, youtube, soundcloud, spotify, cover, tags, duration_sec, added_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (title, youtube_db, soundcloud_db, spotify_db, cover_db, tags_db, duration_sec, added_at))
         conn.commit()
         return int(cur.lastrowid)
 
@@ -656,3 +664,21 @@ def get_all_artists() -> list[str]:
             ORDER BY name
         """)
         return [row[0].replace("artist: ", "") for row in cur.fetchall()]
+
+def mark_artist_lastfm_fetched(artist_name: str) -> None:
+    tag_name = f"artist: {artist_name.strip().lower()}"
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE tags SET lastfm_fetched=1 WHERE name=?
+        """, (tag_name,))
+        conn.commit()
+
+def get_artists_lastfm_fetched() -> set:
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT name FROM tags
+            WHERE name LIKE 'artist: %' AND lastfm_fetched=1
+        """)
+        return {row[0].replace("artist: ", "") for row in cur.fetchall()}

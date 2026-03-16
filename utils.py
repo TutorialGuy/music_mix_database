@@ -61,7 +61,7 @@ def parse_tags_input(raw: str) -> list[str]:
         if not p:
             continue
         # знімаємо зайві лапки/дужки по краях
-        p = p.strip().strip("[](){}")
+        # p = p.strip().strip("[](){}")
         p = p.strip().strip("'").strip('"')
         p = p.strip()
         if p:

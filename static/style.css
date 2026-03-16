@@ -307,9 +307,13 @@ mark {
   color: var(--text-main);
 }
 
-.tagSuggestItem:hover,
-.tagSuggestItem.active{
+.tagSuggestItem:hover {
   background: var(--bg-secondary);
+}
+
+.tagSuggestItem.active {
+  background: var(--accent);
+  color: #fff;
 }
 
 .tagSuggestEmpty{

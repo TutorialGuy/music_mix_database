@@ -54,7 +54,9 @@
                 style="font-size:12px;">
           ↓ Last.fm
         </button>
-        <span class="fetchStatus" id="status-{{ loop.index }}" style="font-size:12px; margin-left:6px; color:var(--text-muted);"></span>
+        <span class="fetchStatus" id="status-{{ loop.index }}" style="font-size:12px; margin-left:6px; color:var(--text-muted);">
+          {% if artist in lastfm_fetched %}✅{% endif %}
+        </span>
       </td>
     </tr>
     {% endfor %}
