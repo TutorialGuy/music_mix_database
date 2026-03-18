@@ -1,12 +1,12 @@
 from database import get_connection
-from datetime import datetime
-
-today = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 with get_connection() as conn:
     cur = conn.cursor()
-    cur.execute("UPDATE mixes SET added_at=? WHERE added_at IS NULL", (today,))
-    updated = cur.rowcount
+    cur.execute("SELECT id, name FROM tags WHERE name LIKE 'artist:  %'")
+    rows = cur.fetchall()
+    for tag_id, name in rows:
+        fixed = 'artist: ' + name[8:].strip()
+        print(f"  '{name}' -> '{fixed}'")
+        cur.execute("UPDATE tags SET name=? WHERE id=?", (fixed, tag_id))
     conn.commit()
-
-print(f"Оновлено міксів: {updated}")
+    print(f"Виправлено: {len(rows)}")

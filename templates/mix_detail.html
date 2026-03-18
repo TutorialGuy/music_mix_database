@@ -86,7 +86,7 @@
   {% if tags %}
   <div class="tagsDisplayBox" id="tagsDisplayBox">
     {% for tag, cnt in tags %}
-      <a href="/tag/{{ tag }}"
+      <a href="/tag/{{ tag | urlencode }}"
          class="tag tagDisplay {% if tag.startswith('artist: ') %}tag-artist{% endif %}"
          style="text-decoration:none;">
         {{ tag }}

@@ -48,7 +48,6 @@ ALLOWED_EXT = {"jpg", "jpeg", "png", "bmp", "webp", "gif"}
 app.jinja_env.filters["time_to_seconds"] = time_to_seconds
 app.jinja_env.globals["format_seconds_to_hms"] = format_seconds_to_hms
 
-
 @app.route("/", methods=["GET"])
 def home():
     q = request.args.get("q", "").strip()
@@ -404,7 +403,9 @@ def delete_tags_page():
 
     return redirect("/tags")
 
-@app.route("/tag/<tag_name>")
+from urllib.parse import unquote
+
+@app.route("/tag/<path:tag_name>")
 def tag_page(tag_name):
     return redirect(f"/?tag={tag_name}")
 
@@ -416,7 +417,7 @@ def artists_page():
     all_implications = get_all_implications()
     artist_implications = {}
     for artist in artists:
-        tag_name = f"artist: {artist}"
+        tag_name = f"artist: {artist.strip()}"
         implied = [imp for tag, imp in all_implications if tag == tag_name]
         artist_implications[artist] = implied
 
@@ -430,20 +431,38 @@ def artists_page():
 
 @app.route("/artists/fetch-tags/<path:artist_name>", methods=["POST"])
 def fetch_artist_tags(artist_name):
-    import os
-    print("DEBUG API KEY:", repr(os.getenv("LASTFM_API_KEY")))
-    print("DEBUG LASTFM_API_KEY var:", repr(LASTFM_API_KEY))
+    from urllib.parse import unquote
+    artist_name = unquote(artist_name)
+    print("DEBUG artist_name:", repr(artist_name))
+
+    # Last.fm іноді індексує + як пробіл
+    artist_for_lastfm = artist_name
+
     if not LASTFM_API_KEY:
         return jsonify({"ok": False, "error": "API ключ не знайдено"}), 500
 
     try:
+        # спробуємо з оригінальним іменем
         resp = requests.get("https://ws.audioscrobbler.com/2.0/", params={
             "method": "artist.gettoptags",
             "artist": artist_name,
             "api_key": LASTFM_API_KEY,
             "format": "json"
         }, timeout=10)
+        print("DEBUG Last.fm response (original):", resp.text[:200])
         data = resp.json()
+
+        # якщо не знайшло і є + в імені — пробуємо з пробілом
+        if ("toptags" not in data or "tag" not in data["toptags"]) and "+" in artist_name:
+            alt_name = artist_name.replace("+", " ")
+            resp = requests.get("https://ws.audioscrobbler.com/2.0/", params={
+                "method": "artist.gettoptags",
+                "artist": alt_name,
+                "api_key": LASTFM_API_KEY,
+                "format": "json"
+            }, timeout=10)
+            print("DEBUG Last.fm response (alt):", resp.text[:200])
+            data = resp.json()
 
         if "toptags" not in data or "tag" not in data["toptags"]:
             mark_artist_lastfm_fetched(artist_name)
@@ -452,7 +471,6 @@ def fetch_artist_tags(artist_name):
         raw_tags = data["toptags"]["tag"][:5]
         tag_names = [t["name"].strip().lower() for t in raw_tags]
 
-        # пропускаємо через аліаси
         with __import__('sqlite3').connect('music.db') as conn:
             cur = conn.cursor()
             cur.execute("SELECT alias_name, target_name FROM tag_aliases")
@@ -460,7 +478,6 @@ def fetch_artist_tags(artist_name):
 
         resolved = [aliases.get(t, t) for t in tag_names]
 
-        # зберігаємо як імплікації для тегу артиста
         artist_tag = f"artist: {artist_name.lower().strip()}"
         for genre in resolved:
             add_implication(artist_tag, genre)
