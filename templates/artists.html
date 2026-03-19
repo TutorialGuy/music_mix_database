@@ -46,17 +46,19 @@
           <span style="color:var(--text-muted); font-size:12px;">—</span>
         {% endif %}
       </td>
-      <td style="padding:8px; text-align:right;">
-        <button type="button"
-                class="fetchTagsBtn"
-                data-artist="{{ artist }}"
-                data-index="{{ loop.index }}"
-                style="font-size:12px;">
-          ↓ Last.fm
-        </button>
-        <span class="fetchStatus" id="status-{{ loop.index }}" style="font-size:12px; margin-left:6px; color:var(--text-muted);">
-          {% if artist in lastfm_fetched %}✅{% endif %}
-        </span>
+      <td style="padding:8px; text-align:right; white-space:nowrap;">
+        <div style="display:flex; flex-direction:row; align-items:center; gap:6px; justify-content:flex-end;">
+          <button type="button"
+                  class="fetchTagsBtn"
+                  data-artist="{{ artist }}"
+                  data-index="{{ loop.index }}"
+                  style="font-size:12px;">
+            ↓ Last.fm
+          </button>
+          <span class="fetchStatus" id="status-{{ loop.index }}" style="font-size:11px; color:var(--text-muted); min-height:16px;">
+            {% if artist in lastfm_fetched %}✅{% endif %}
+          </span>
+        </div>
       </td>
     </tr>
     {% endfor %}
