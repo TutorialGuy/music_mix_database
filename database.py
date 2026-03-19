@@ -209,6 +209,15 @@ def delete_mix(mix_id):
 
     return True
 
+def update_mix_title(mix_id: int, title: str) -> None:
+    title = (title or "").strip()
+    if not title:
+        return
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("UPDATE mixes SET title=? WHERE id=?", (title, mix_id))
+        conn.commit()
+
 def update_mix_links(mix_id: int, youtube: str, soundcloud: str, spotify: str) -> None:
     youtube_db = (youtube or "").strip() or None
     sc_db = (soundcloud or "").strip() or None

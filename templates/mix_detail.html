@@ -4,7 +4,20 @@
 
 {% block content %}
 
-<h2>Мікс: {{ mix_title }}</h2>
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+  <h2 id="mixTitleDisplay" style="margin:0;">Мікс: <span id="mixTitleText">{{ mix_title }}</span></h2>
+  <button type="button" id="editTitleBtn" style="font-size:12px; padding:3px 8px;">✏️ змінити</button>
+</div>
+
+<div id="titleEditForm" style="display:none; margin-bottom:12px;">
+  <div style="display:flex; gap:8px; align-items:center;">
+    <input id="titleInput" value="{{ mix_title }}"
+           style="width:420px; font-size:16px;">
+    <button type="button" id="saveTitleBtn">Зберегти</button>
+    <button type="button" id="cancelTitleBtn">Скасувати</button>
+  </div>
+  <div id="titleError" style="color:var(--danger); font-size:13px; margin-top:4px; display:none;"></div>
+</div>
 
 <!-- Навігація зверху -->
 <p style="margin-top:6px;">

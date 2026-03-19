@@ -634,11 +634,12 @@ trackList.addEventListener("dragend", () => {
     const links = li.querySelector(".searchLinks");
     if (links) {
       links.innerHTML = [
-        { name: "SoundCloud", url: `https://soundcloud.com/search?q=${q}`, color: "#ff7733" },
-        { name: "YouTube", url: `https://www.youtube.com/results?search_query=${q}`, color: "#ff4444" },
-        { name: "YouTube Music", url: `https://music.youtube.com/search?q=${q}`, color: "#ff6666" },
-        { name: "Spotify", url: `https://open.spotify.com/search/${q}`, color: "#1ed760" },
-        { name: "Bandcamp", url: `https://bandcamp.com/search?q=${q}`, color: "#1e96dc" },
+        { name: "SoundCloud",    url: `https://soundcloud.com/search?q=${q}`,               color: "#ff7733", icon: "soundcloud.svg" },
+        { name: "YouTube",       url: `https://www.youtube.com/results?search_query=${q}`,   color: "#ff4444", icon: "youtube.svg" },
+        { name: "YouTube Music", url: `https://music.youtube.com/search?q=${q}`,             color: "#ff6666", icon: "youtubemusic.svg" },
+        { name: "Spotify",       url: `https://open.spotify.com/search/${q}`,                color: "#1ed760", icon: "spotify.svg" },
+        { name: "Bandcamp",      url: `https://bandcamp.com/search?q=${q}`,                  color: "#408294", icon: "bandcamp.svg" },
+        { name: "Last.fm",       url: `https://www.last.fm/search/tracks?q=${q}`,            color: "#d51007", icon: "lastfm.svg" },
       ].map(s => `
         <a href="${s.url}" target="_blank" style="
           display:flex; align-items:center; gap:10px;
@@ -647,6 +648,9 @@ trackList.addEventListener("dragend", () => {
           text-decoration:none; color:${s.color};
           font-size:13px; font-weight:500;
           background:rgba(255,255,255,0.04);">
+          <img src="/static/icons/${s.icon}"
+               style="width:16px; height:16px; object-fit:contain; flex-shrink:0;"
+               alt="${escapeHtml(s.name)}">
           ${escapeHtml(s.name)}
           <span style="margin-left:auto; color:#555; font-size:12px;">↗</span>
         </a>
@@ -667,6 +671,84 @@ trackList.addEventListener("dragend", () => {
   }
   function escapeAttr(s) {
     return escapeHtml(s);
+  }
+
+  // ----- редагування назви міксу -----
+  const editTitleBtn = document.getElementById("editTitleBtn");
+  const cancelTitleBtn = document.getElementById("cancelTitleBtn");
+  const saveTitleBtn = document.getElementById("saveTitleBtn");
+  const titleEditForm = document.getElementById("titleEditForm");
+  const titleInput = document.getElementById("titleInput");
+  const mixTitleText = document.getElementById("mixTitleText");
+  const titleError = document.getElementById("titleError");
+
+  if (editTitleBtn) {
+    editTitleBtn.addEventListener("click", () => {
+      titleEditForm.style.display = "block";
+      editTitleBtn.style.display = "none";
+      titleInput.focus();
+      titleInput.select();
+    });
+
+    cancelTitleBtn.addEventListener("click", () => {
+      titleEditForm.style.display = "none";
+      editTitleBtn.style.display = "inline-block";
+      titleError.style.display = "none";
+      titleInput.value = mixTitleText.textContent;
+    });
+
+    saveTitleBtn.addEventListener("click", async () => {
+      const newTitle = titleInput.value.trim();
+      if (!newTitle) {
+        titleError.textContent = "Назва не може бути порожньою";
+        titleError.style.display = "block";
+        return;
+      }
+
+      const mixId = (trackList || document.getElementById("tagsBlock"))
+        ?.dataset?.mixId
+        || window.location.pathname.split("/")[2];
+
+      const fd = new FormData();
+      fd.append("title", newTitle);
+
+      try {
+        const resp = await fetch(`/mix/${mixId}/update-title`, {
+          method: "POST",
+          body: fd
+        });
+        const data = await resp.json();
+
+        if (!resp.ok) {
+          titleError.textContent = data.error || "Помилка збереження";
+          titleError.style.display = "block";
+          return;
+        }
+
+        // оновлюємо назву скрізь на сторінці
+        mixTitleText.textContent = data.title;
+        document.title = `Мікс: ${data.title}`;
+
+        // оновлюємо посилання в блоці linksBox
+        document.querySelectorAll(".linkValue a").forEach(a => {
+          a.textContent = data.title;
+        });
+
+        titleEditForm.style.display = "none";
+        editTitleBtn.style.display = "inline-block";
+        titleError.style.display = "none";
+
+      } catch (err) {
+        titleError.textContent = "Помилка збереження";
+        titleError.style.display = "block";
+      }
+    });
+
+    // зберігати по Enter
+    titleInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") saveTitleBtn.click();
+      if (e.key === "Escape") cancelTitleBtn.click();
+    });
   }
 //---ось тут кінець---
 });

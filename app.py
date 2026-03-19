@@ -4,7 +4,7 @@ from database import (
     add_track_to_mix, get_tracks_for_mix,
     get_mix_track_row, update_mix_track,
     get_mix_cover, update_mix_cover, update_mix_links,
-    delete_mix_track, delete_mix,
+    delete_mix_track, delete_mix, update_mix_title,
     search_tracks, search_mixes,
     set_mix_tags, get_mix_tags,
     get_all_tags_with_counts, delete_tags,
@@ -696,6 +696,14 @@ def delete_track(mix_track_id):
 def delete_mix_page(mix_id):
     delete_mix(mix_id)
     return redirect("/mixes")
+
+@app.route("/mix/<int:mix_id>/update-title", methods=["POST"])
+def update_mix_title_route(mix_id):
+    title = request.form.get("title", "").strip()
+    if not title:
+        return jsonify({"ok": False, "error": "Назва не може бути порожньою"}), 400
+    update_mix_title(mix_id, title)
+    return jsonify({"ok": True, "title": title})
 
 @app.route("/mix/<int:mix_id>/reorder-tracks", methods=["POST"])
 def reorder_tracks(mix_id):
