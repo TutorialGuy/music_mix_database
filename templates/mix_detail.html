@@ -61,6 +61,7 @@
     </div>
 
     <button type="button" class="toggleInlineEdit" style="display:none;">✏️</button>
+    <button type="button" class="trackSearchBtn">🔍</button>
   </div>
 
   <div class="editRow" style="display:none; margin-top:6px;">
@@ -71,6 +72,12 @@
       <input name="soundcloud" value="{{ t.sc_track or '' }}" placeholder="SoundCloud URL" style="width:260px;">
       <button type="submit">Зберегти</button>
     </form>
+  </div>
+                    <div class="searchRow" style="display:none; margin-top:6px;">
+    <div style="background:#2b2d31; border:1px solid #3c3f45; border-radius:8px; padding:10px 14px;">
+      <div style="font-size:11px; color:#a1a1a1; margin-bottom:8px;">Пошук на сервісах:</div>
+      <div class="searchLinks" style="display:flex; flex-direction:column; gap:6px;"></div>
+    </div>
   </div>
 </li>
               {% endfor %}

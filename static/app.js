@@ -601,6 +601,61 @@ trackList.addEventListener("dragend", () => {
     });
   }
 
+// ----- пошук треку на сервісах -----
+  trackList.addEventListener("click", (e) => {
+    const btn = e.target.closest(".trackSearchBtn");
+    if (!btn) return;
+
+    const li = btn.closest("li[data-track-id]");
+    if (!li) return;
+
+    const searchRow = li.querySelector(".searchRow");
+    if (!searchRow) return;
+
+    const isOpen = searchRow.style.display === "block";
+
+    // закриваємо всі інші панелі
+    trackList.querySelectorAll(".searchRow").forEach(r => r.style.display = "none");
+    trackList.querySelectorAll(".editRow").forEach(r => r.style.display = "none");
+
+    if (isOpen) return;
+
+    // формуємо пошуковий запит з тексту треку
+    const trackText = li.querySelector(".trackText");
+    let query = "";
+    if (trackText) {
+      query = trackText.innerText
+        .replace(/\[.*?\]/g, "")  // прибираємо таймкод
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    const q = encodeURIComponent(query);
+    const links = li.querySelector(".searchLinks");
+    if (links) {
+      links.innerHTML = [
+        { name: "SoundCloud", url: `https://soundcloud.com/search?q=${q}`, color: "#ff7733" },
+        { name: "YouTube", url: `https://www.youtube.com/results?search_query=${q}`, color: "#ff4444" },
+        { name: "YouTube Music", url: `https://music.youtube.com/search?q=${q}`, color: "#ff6666" },
+        { name: "Spotify", url: `https://open.spotify.com/search/${q}`, color: "#1ed760" },
+        { name: "Bandcamp", url: `https://bandcamp.com/search?q=${q}`, color: "#1e96dc" },
+      ].map(s => `
+        <a href="${s.url}" target="_blank" style="
+          display:flex; align-items:center; gap:10px;
+          padding:7px 10px; border-radius:6px;
+          border:1px solid rgba(255,255,255,0.08);
+          text-decoration:none; color:${s.color};
+          font-size:13px; font-weight:500;
+          background:rgba(255,255,255,0.04);">
+          ${escapeHtml(s.name)}
+          <span style="margin-left:auto; color:#555; font-size:12px;">↗</span>
+        </a>
+      `).join("");
+    }
+
+    searchRow.style.display = "block";
+  });
+
   // ----- escape helpers -----
   function escapeHtml(s) {
     return String(s)
