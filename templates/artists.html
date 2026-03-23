@@ -15,6 +15,17 @@
   Жанри зберігаються як імплікації — тег артиста буде автоматично тягнути їх при збереженні міксу.
 </p>
 
+<form method="get" style="margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+  <label style="font-size:13px; color:var(--text-muted);">Сортування:</label>
+  <select name="sort" style="font-size:13px;">
+    <option value="name"         {% if current_sort=='name' %}selected{% endif %}>За алфавітом</option>
+    <option value="lastfm"       {% if current_sort=='lastfm' %}selected{% endif %}>Last.fm (спочатку без галочки)</option>
+    <option value="mixes"        {% if current_sort=='mixes' %}selected{% endif %}>За кількістю міксів</option>
+    <option value="implications" {% if current_sort=='implications' %}selected{% endif %}>За кількістю жанрів</option>
+  </select>
+  <button type="submit">Застосувати</button>
+</form>
+
 <table style="width:100%; border-collapse:collapse; font-size:14px;">
   <thead>
     <tr style="border-bottom:1px solid var(--border); color:var(--text-muted); font-size:12px;">
@@ -24,13 +35,16 @@
     </tr>
   </thead>
   <tbody>
-    {% for artist in artists %}
-    <tr style="border-bottom:1px solid var(--border);" id="row-{{ loop.index }}">
+   {% for a in artists %}
+    <tr ...>
       <td style="padding:8px; white-space:nowrap;">
-        <a href="/tag/artist: {{ artist }}">{{ artist }}</a>
+        <a href="/tag/artist: {{ a.name }}">{{ a.name }}</a>
+        <span style="color:var(--text-muted); font-size:11px; margin-left:6px;">
+          {% if a.mix_count %}{{ a.mix_count }} міксів{% endif %}
+        </span>
       </td>
       <td style="padding:8px;" id="tags-{{ loop.index }}">
-        {% set implied = artist_implications[artist] %}
+        {% set implied = artist_implications[a.name] %}
         {% if implied %}
           {% for genre in implied %}
             <span style="display:inline-flex; align-items:center; gap:4px; margin:2px;">
@@ -49,14 +63,14 @@
       <td style="padding:8px; text-align:right; white-space:nowrap;">
         <div style="display:flex; flex-direction:row; align-items:center; gap:6px; justify-content:flex-end;">
           <button type="button"
-                  class="fetchTagsBtn"
-                  data-artist="{{ artist }}"
-                  data-index="{{ loop.index }}"
+                class="fetchTagsBtn"
+                data-artist="{{ a.name }}"
+                data-index="{{ loop.index }}"
                   style="font-size:12px;">
             ↓ Last.fm
           </button>
           <span class="fetchStatus" id="status-{{ loop.index }}" style="font-size:11px; color:var(--text-muted); min-height:16px;">
-            {% if artist in lastfm_fetched %}✅{% endif %}
+            {% if a.name in lastfm_fetched %}✅{% endif %}
           </span>
         </div>
       </td>

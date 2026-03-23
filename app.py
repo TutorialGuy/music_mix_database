@@ -411,22 +411,32 @@ def tag_page(tag_name):
 
 @app.route("/artists", methods=["GET"])
 def artists_page():
-    artists = get_all_artists()
+    sort = request.args.get("sort", "name")
+    artists_raw = get_all_artists()
 
-    # для кожного артиста збираємо його поточні імплікації
+    if sort == "lastfm":
+        artists_raw.sort(key=lambda a: (not a["lastfm_fetched"], a["name"]))
+    elif sort == "mixes":
+        artists_raw.sort(key=lambda a: (-a["mix_count"], a["name"]))
+    elif sort == "implications":
+        artists_raw.sort(key=lambda a: (-a["impl_count"], a["name"]))
+    else:
+        artists_raw.sort(key=lambda a: a["name"])
+
     all_implications = get_all_implications()
     artist_implications = {}
-    for artist in artists:
-        tag_name = f"artist: {artist.strip()}"
+    for a in artists_raw:
+        tag_name = f"artist: {a['name']}"
         implied = [imp for tag, imp in all_implications if tag == tag_name]
-        artist_implications[artist] = implied
+        artist_implications[a["name"]] = implied
 
     fetched = get_artists_lastfm_fetched()
     return render_template(
         "artists.html",
-        artists=artists,
+        artists=artists_raw,
         artist_implications=artist_implications,
-        lastfm_fetched=fetched
+        lastfm_fetched=fetched,
+        current_sort=sort
     )
 
 @app.route("/artists/fetch-tags/<path:artist_name>", methods=["POST"])

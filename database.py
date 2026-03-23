@@ -664,15 +664,31 @@ def apply_aliases_and_implications(tags: list[str]) -> list[str]:
 
     return result
 
-def get_all_artists() -> list[str]:
+def get_all_artists() -> list[dict]:
     with get_connection() as conn:
         cur = conn.cursor()
         cur.execute("""
-            SELECT name FROM tags
-            WHERE name LIKE 'artist: %'
-            ORDER BY name
+            SELECT
+                t.name,
+                t.lastfm_fetched,
+                COUNT(DISTINCT mt.mix_id) as mix_count,
+                COUNT(DISTINCT ti.implies_name) as impl_count
+            FROM tags t
+            LEFT JOIN mix_tags mt ON mt.tag_id = t.id
+            LEFT JOIN tag_implications ti ON ti.tag_name = t.name
+            WHERE t.name LIKE 'artist: %'
+            GROUP BY t.id, t.name, t.lastfm_fetched
+            ORDER BY t.name
         """)
-        return [row[0].replace("artist: ", "") for row in cur.fetchall()]
+        return [
+            {
+                "name": row[0].replace("artist: ", ""),
+                "lastfm_fetched": bool(row[1]),
+                "mix_count": row[2],
+                "impl_count": row[3]
+            }
+            for row in cur.fetchall()
+        ]
 
 def mark_artist_lastfm_fetched(artist_name: str) -> None:
     tag_name = f"artist: {artist_name.strip().lower()}"
