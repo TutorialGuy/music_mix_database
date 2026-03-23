@@ -443,26 +443,28 @@ def artists_page():
 def fetch_artist_tags(artist_name):
     from urllib.parse import unquote
     artist_name = unquote(artist_name)
-    print("DEBUG artist_name:", repr(artist_name))
-
-    # Last.fm іноді індексує + як пробіл
-    artist_for_lastfm = artist_name
 
     if not LASTFM_API_KEY:
         return jsonify({"ok": False, "error": "API ключ не знайдено"}), 500
 
     try:
-        # спробуємо з оригінальним іменем
         resp = requests.get("https://ws.audioscrobbler.com/2.0/", params={
             "method": "artist.gettoptags",
             "artist": artist_name,
             "api_key": LASTFM_API_KEY,
             "format": "json"
         }, timeout=10)
-        print("DEBUG Last.fm response (original):", resp.text[:200])
-        data = resp.json()
 
-        # якщо не знайшло і є + в імені — пробуємо з пробілом
+        if resp.status_code != 200:
+            mark_artist_lastfm_fetched(artist_name)
+            return jsonify({"ok": False, "error": f"Last.fm повернув {resp.status_code}"}), 404
+
+        try:
+            data = resp.json()
+        except Exception:
+            mark_artist_lastfm_fetched(artist_name)
+            return jsonify({"ok": False, "error": "Last.fm повернув невалідну відповідь"}), 502
+
         if ("toptags" not in data or "tag" not in data["toptags"]) and "+" in artist_name:
             alt_name = artist_name.replace("+", " ")
             resp = requests.get("https://ws.audioscrobbler.com/2.0/", params={
@@ -471,8 +473,11 @@ def fetch_artist_tags(artist_name):
                 "api_key": LASTFM_API_KEY,
                 "format": "json"
             }, timeout=10)
-            print("DEBUG Last.fm response (alt):", resp.text[:200])
-            data = resp.json()
+            try:
+                data = resp.json()
+            except Exception:
+                mark_artist_lastfm_fetched(artist_name)
+                return jsonify({"ok": False, "error": "Last.fm повернув невалідну відповідь"}), 502
 
         if "toptags" not in data or "tag" not in data["toptags"]:
             mark_artist_lastfm_fetched(artist_name)
@@ -496,7 +501,9 @@ def fetch_artist_tags(artist_name):
         return jsonify({"ok": True, "tags": resolved})
 
     except requests.RequestException as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+        return jsonify({"ok": False, "error": f"Помилка мережі: {str(e)}"}), 500
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"Несподівана помилка: {str(e)}"}), 500
 
 @app.route("/artists/delete-implication", methods=["POST"])
 def delete_artist_implication():
