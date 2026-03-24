@@ -118,14 +118,21 @@ def parse_track_line(line: str) -> Optional[tuple[str, str, str, str]]:
     artist = ""
     title = ""
     time_value = ""
-    soundcloud = ""  # поки не парсимо з тексту
+    soundcloud = ""
 
-    # A) TIME - TITLE
+    # A) TIME - Artist - Title  АБО  TIME - Title
+    # 00:00 - Magdalene - u n w i l l i n g
     # 0:04:50 - Lighthouse Suite
     m = re.match(r"^(\d{1,2}:\d{2}:\d{2}|\d{1,2}:\d{2})\s*-\s*(.+)$", line)
     if m:
         time_value = _normalize_time(m.group(1))
-        title = m.group(2).strip()
+        rest = m.group(2).strip()
+        if " - " in rest:
+            artist, title = [p.strip() for p in rest.split(" - ", 1)]
+        elif " — " in rest:
+            artist, title = [p.strip() for p in rest.split(" — ", 1)]
+        else:
+            title = rest
         return (artist, title, soundcloud, time_value)
 
     # B) N. TITLE TIME

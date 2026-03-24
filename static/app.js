@@ -626,6 +626,7 @@ trackList.addEventListener("dragend", () => {
     if (trackText) {
       query = trackText.innerText
         .replace(/\[.*?\]/g, "")  // прибираємо таймкод
+        .replace(/—/g, "-")       // замінюємо тире на дефіс для сумісності
         .replace(/\s+/g, " ")
         .trim();
     }
