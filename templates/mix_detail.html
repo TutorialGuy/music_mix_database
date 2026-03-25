@@ -105,9 +105,9 @@
   <div id="tagsViewMode">
   {% if tags %}
   <div class="tagsDisplayBox" id="tagsDisplayBox">
-    {% for tag, cnt in tags %}
-      <a href="/tag/{{ tag | urlencode }}"
-         class="tag tagDisplay {% if tag.startswith('artist: ') %}tag-artist{% endif %}"
+   {% for tag, cnt in tags %}
+<a href="/tag/{{ tag | urlencode }}"
+         class="tag tagDisplay {% if tag.startswith('artist: ') %}tag-artist{% elif tag == 'dead source' %}tag-dead-source{% elif tag == 'empty tracklist' %}tag-empty-tracklist{% endif %}"
          style="text-decoration:none;">
         {{ tag }}
         <span class="tag-count">{{ cnt }}</span>

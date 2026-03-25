@@ -208,9 +208,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const inputWrap = tagsEditBox.querySelector(".tagInputWrap");
 
     currentTags.forEach(tag => {
-      const isArtist = tag.startsWith("artist:");
+      let tagClass = "tag tagEdit";
+      if (tag.startsWith("artist: ")) tagClass += " tag-artist";
+      else if (tag === "dead source") tagClass += " tag-dead-source";
+      else if (tag === "empty tracklist") tagClass += " tag-empty-tracklist";
       const span = document.createElement("span");
-      span.className = "tag tagEdit" + (isArtist ? " tag-artist" : "");
+      span.className = tagClass;
       span.dataset.tag = tag;
       span.innerHTML = `${escapeHtml(tag)} <button type="button" class="tagRemoveBtn" data-tag="${escapeAttr(tag)}">×</button>`;
       tagsEditBox.insertBefore(span, inputWrap);
@@ -291,12 +294,18 @@ document.addEventListener("DOMContentLoaded", () => {
       console.log("TAGS: displayBox знайдено ->", !!displayBox);
       if (displayBox) {
         displayBox.innerHTML = data.tags
-          .map(([name, cnt]) => `<a href="/tag/${encodeURIComponent(name)}"
-            class="tag tagDisplay${name.startsWith("artist: ") ? " tag-artist" : ""}"
-            style="text-decoration:none;"
-            data-tag="${escapeAttr(name)}">
-            ${escapeHtml(name)} <span class="tag-count">${cnt}</span>
-          </a>`)
+          .map(([name, cnt]) => {
+              let cls = "tag tagDisplay";
+              if (name.startsWith("artist: ")) cls += " tag-artist";
+              else if (name === "dead source") cls += " tag-dead-source";
+              else if (name === "empty tracklist") cls += " tag-empty-tracklist";
+              return `<a href="/tag/${encodeURIComponent(name)}"
+                class="${cls}"
+                style="text-decoration:none;"
+                data-tag="${escapeAttr(name)}">
+                ${escapeHtml(name)} <span class="tag-count">${cnt}</span>
+              </a>`;
+            })
           .join("");
         console.log("TAGS: displayBox оновлено");
       }

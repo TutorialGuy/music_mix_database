@@ -33,7 +33,7 @@
 <div id="normalList" style="margin-top:14px; display:flex; flex-wrap:wrap; gap:8px;">
   {% for t in tags %}
     <a href="/tag/{{ t.name }}"
-       class="tag tagDisplay {% if t.name.startswith('artist: ') %}tag-artist{% endif %}"
+       class="tag tagDisplay {% if t.name.startswith('artist: ') %}tag-artist{% elif t.name == 'dead source' %}tag-dead-source{% elif t.name == 'empty tracklist' %}tag-empty-tracklist{% endif %}"
        style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
       {{ t.name }}
       <span class="tag-count">{{ t.cnt }}</span>

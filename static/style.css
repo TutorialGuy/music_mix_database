@@ -431,3 +431,14 @@ mark {
   margin-bottom: 16px;
 }
 
+.tag-dead-source {
+    background: #2e1a1a !important;
+    border-color: #5a2d2d !important;
+    color: #ff6b6b !important;
+}
+
+.tag-empty-tracklist {
+    background: #2a1f2e !important;
+    border-color: #5a3d6b !important;
+    color: #c97ee0 !important;
+}
