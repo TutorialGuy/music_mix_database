@@ -1,3 +1,7 @@
+/* ============================================================
+   ЗМІННІ ТА БАЗОВІ СТИЛІ
+   ============================================================ */
+
 :root {
     --bg-main: #1e1f22;
     --bg-secondary: #2b2d31;
@@ -29,6 +33,14 @@ a:hover {
     max-width: 1100px;
     margin: 0 auto;
     padding: 20px;
+}
+
+.card {
+    background: var(--bg-card);
+    padding: 16px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    margin-bottom: 16px;
 }
 
 button {
@@ -67,368 +79,37 @@ mark {
     padding: 2px 4px;
     border-radius: 4px;
 }
-.mix-container{
-    display:flex;
-    align-items:flex-start;
-    gap: 11ch;              /* рівно ~11 символів */
-}
-
-/* Ліва частина займає весь доступний простір */
-.mix-left{
-    flex: 1 1 auto;
-    min-width: 520px;       /* щоб довгі назви не душились */
-}
-
-/* Права частина — фіксована */
-.mix-right{
-    flex: 0 0 320px;        /* фікс ширина правої колонки */
-}
-
-.tag{
-    display:inline-block;
-    background:#2b2d31;
-    border:1px solid #3c3f45;
-    padding:4px 8px;
-    margin:3px 4px 3px 0;
-    border-radius:8px;
-    font-size:13px;
-    color:#e3e3e3;
-}
-
-.dropzone{
-  border: 2px dashed #555;
-  border-radius: 12px;
-  padding: 16px;
-  text-align: center;
-  cursor: pointer;
-  background: rgba(255,255,255,0.03);
-}
-
-.dropzone:hover{
-  border-color: #777;
-}
-
-.dropzone.dragover{
-  border-color: #caa600;
-  background: rgba(255,255,0,0.06);
-}
-
-.dropzone-input{
-  display: block;
-  margin: 12px auto 0;
-  max-width: 100%;
-}
-
-.dropzone-title{
-  font-weight: 700;
-}
-
-.dropzone-hint{
-  color: #aaa;
-  font-size: 0.9em;
-  margin-top: 4px;
-}
-
-.help{
-  display:block;
-  color: #888;
-  margin-top: 6px;
-}
-
-/* Drag&drop підказки */
-.dragging {
-  opacity: 0.55;
-}
-
-.dropIndicator {
-  height: 0;
-  border-top: 2px solid #6aa9ff;
-  margin: 6px 0;
-}
-
-//* Sticky toolbar for tracklist edit controls (styled like a card) */
-.tracklist-toolbar {
-  position: sticky;
-  top: 10px;              /* трохи “повітря” зверху */
-  z-index: 50;
-
-  margin: 0 0 12px 0;
-  padding: 0;             /* padding буде у inner */
-
-  background: transparent; /* прибираємо чорний прямокутник */
-}
-
-.tracklist-toolbar-inner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-
-  padding: 10px 12px;
-
-  /* стиль “картки” */
-  background: rgba(40, 40, 44, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(8px);
-}
-
-.tracklist-editbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.tracklist-hint {
-  color: rgba(255, 255, 255, 0.55);
-  font-size: 13px;
-}
-
-/* Кнопки в панелі — трохи “декоративніші” */
-.tracklist-toolbar button {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  padding: 6px 10px;
-  cursor: pointer;
-}
-
-.tracklist-toolbar button:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-#deleteSelectedBtn {
-  background: rgba(255, 80, 80, 0.14);
-  border-color: rgba(255, 80, 80, 0.25);
-}
-
-#deleteSelectedBtn:hover {
-  background: rgba(255, 80, 80, 0.2);
-}
-
-#trackList {
-  scroll-margin-top: 70px;
-}
-
-/* прибрати завеликі стандартні відступи заголовків/параграфів у mix сторінці */
-.mix-left h3 {
-  margin-top: 14px;
-  margin-bottom: 10px;
-}
-
-.mix-left p {
-  margin-top: 8px;
-  margin-bottom: 8px;
-}
-
-/* зменшуємо відступ після блоку тегів */
-.mix-left .tag {
-  margin: 3px 4px 3px 0;
-}
-
-.mix-bottom{
-  margin-top:20px;
-}
-
-.linksBox {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 12px;
-  margin-top: 8px;
-}
-
-.linkRow {
-  display: grid;
-  grid-template-columns: 110px 1fr;
-  gap: 10px;
-  padding: 6px 0;
-}
-
-.linkRow + .linkRow {
-  border-top: 1px solid rgba(255,255,255,0.06);
-}
-
-.link-icon {
-  width: 16px;
-  height: 16px;
-  object-fit: contain;
-  vertical-align: middle;
-  margin-right: 6px;
-  flex-shrink: 0;
-}
-
-.linkLabel {
-  color: var(--text-muted);
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-}
-
-.field-label-icon {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.linkValue a {
-  word-break: break-word;
-}
 
 .muted {
-  color: var(--text-muted);
+    color: var(--text-muted);
 }
 
-.tagAutocompleteWrap{
-  position: relative;
+
+/* ============================================================
+   ТЕГИ — базові стилі (використовуються на всіх сторінках)
+   ============================================================ */
+
+.tag {
+    display: inline-block;
+    background: #2b2d31;
+    border: 1px solid #3c3f45;
+    padding: 4px 8px;
+    margin: 3px 4px 3px 0;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #e3e3e3;
 }
 
-.tagSuggestBox{
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: calc(100% + 4px);
-  z-index: 200;
-
-  display: none;
-  max-height: 220px;
-  overflow-y: auto;
-
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.35);
-}
-
-.tagSuggestItem{
-  padding: 8px 10px;
-  cursor: pointer;
-  color: var(--text-main);
-}
-
-.tagSuggestItem:hover {
-  background: var(--bg-secondary);
-}
-
-.tagSuggestItem.active {
-  background: var(--accent);
-  color: #fff;
-}
-
-.tagSuggestEmpty{
-  padding: 8px 10px;
-  color: var(--text-muted);
-}
-
-.tagsDisplayBox{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  align-items:flex-start;
-
-  width:100%;
-  max-width:100%;
-
-  padding:10px 12px;
-  margin:8px 0 12px 0;
-
-  background: rgba(78, 161, 255, 0.08);
-  border: 1px solid rgba(78, 161, 255, 0.18);
-  border-radius: 10px;
-}
-
-.tagDisplay{
-  background: #243447;
-  border: 1px solid #35506b;
-  color: #dbeafe;
-}
-
-.sectionSpacer{
-  height:14px;
-}
-
-.tag-count {
-  display: inline-block;
-  background: rgba(255,255,255,0.12);
-  border-radius: 6px;
-  padding: 0 5px;
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-left: 4px;
+.tagDisplay {
+    background: #243447;
+    border: 1px solid #35506b;
+    color: #dbeafe;
 }
 
 .tag-artist {
     background: #1a2e1a;
     border-color: #2d5a2d;
     color: #7ec87e;
-}
-
-.tagsEditBox {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  min-height: 48px;
-  padding: 10px 12px;
-  background: rgba(78, 161, 255, 0.08);
-  border: 1px solid rgba(78, 161, 255, 0.18);
-  border-radius: 10px;
-}
-
-.tagEdit {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 6px 4px 8px;
-}
-
-.tagRemoveBtn {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 14px;
-  padding: 0 2px;
-  line-height: 1;
-}
-
-.tagRemoveBtn:hover {
-  color: var(--danger);
-  background: none;
-}
-
-.tagInputWrap {
-  flex: 1;
-  min-width: 120px;
-}
-
-.tagInlineInput {
-  width: 100%;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--text-main);
-  font-size: 14px;
-  padding: 4px 0;
-}
-
-#clearTracklistBtn {
-  background: rgba(255, 80, 80, 0.14);
-  border-color: rgba(255, 80, 80, 0.25);
-  color: var(--danger);
-}
-
-#clearTracklistBtn:hover {
-  background: rgba(255, 80, 80, 0.25);
-}
-
-.card {
-  background: var(--bg-card);
-  padding: 16px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  margin-bottom: 16px;
 }
 
 .tag-dead-source {
@@ -441,4 +122,349 @@ mark {
     background: #2a1f2e !important;
     border-color: #5a3d6b !important;
     color: #c97ee0 !important;
+}
+
+.tag-count {
+    display: inline-block;
+    background: rgba(255,255,255,0.12);
+    border-radius: 6px;
+    padding: 0 5px;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-left: 4px;
+}
+
+
+/* ============================================================
+   АВТОДОПОВНЕННЯ ТЕГІВ (використовується на кількох сторінках)
+   ============================================================ */
+
+.tagAutocompleteWrap {
+    position: relative;
+}
+
+.tagSuggestBox {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 4px);
+    z-index: 200;
+
+    display: none;
+    max-height: 220px;
+    overflow-y: auto;
+
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+}
+
+.tagSuggestItem {
+    padding: 8px 10px;
+    cursor: pointer;
+    color: var(--text-main);
+}
+
+.tagSuggestItem:hover {
+    background: var(--bg-secondary);
+}
+
+.tagSuggestItem.active {
+    background: var(--accent);
+    color: #fff;
+}
+
+.tagSuggestEmpty {
+    padding: 8px 10px;
+    color: var(--text-muted);
+}
+
+
+/* ============================================================
+   СТОРІНКА mix/<id> — загальний макет
+   ============================================================ */
+
+.mix-container {
+    display: flex;
+    align-items: flex-start;
+    gap: 11ch;
+}
+
+.mix-left {
+    flex: 1 1 auto;
+    min-width: 520px;
+}
+
+.mix-right {
+    flex: 0 0 320px;
+}
+
+.mix-bottom {
+    margin-top: 20px;
+}
+
+.mix-left h3 {
+    margin-top: 14px;
+    margin-bottom: 10px;
+}
+
+.mix-left p {
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.mix-left .tag {
+    margin: 3px 4px 3px 0;
+}
+
+.sectionSpacer {
+    height: 14px;
+}
+
+
+/* ============================================================
+   ТРЕКЛІСТ — панель редагування
+   ============================================================ */
+
+.tracklist-toolbar {
+    position: sticky;
+    top: 10px;
+    z-index: 50;
+    margin: 0 0 12px 0;
+    padding: 0;
+    background: transparent;
+}
+
+.tracklist-toolbar-inner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(40, 40, 44, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(8px);
+}
+
+.tracklist-editbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.tracklist-hint {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 13px;
+}
+
+.tracklist-toolbar button {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+}
+
+.tracklist-toolbar button:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+#trackList {
+    scroll-margin-top: 70px;
+}
+
+#deleteSelectedBtn {
+    background: rgba(255, 80, 80, 0.14);
+    border-color: rgba(255, 80, 80, 0.25);
+}
+
+#deleteSelectedBtn:hover {
+    background: rgba(255, 80, 80, 0.2);
+}
+
+#clearTracklistBtn {
+    background: rgba(255, 80, 80, 0.14);
+    border-color: rgba(255, 80, 80, 0.25);
+    color: var(--danger);
+}
+
+#clearTracklistBtn:hover {
+    background: rgba(255, 80, 80, 0.25);
+}
+
+/* Drag & drop */
+.dragging {
+    opacity: 0.55;
+}
+
+.dropIndicator {
+    height: 0;
+    border-top: 2px solid #6aa9ff;
+    margin: 6px 0;
+}
+
+
+/* ============================================================
+   ТЕГИ міксу — режим перегляду і редагування
+   ============================================================ */
+
+.tagsDisplayBox {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 100%;
+    padding: 10px 12px;
+    margin: 8px 0 12px 0;
+    background: rgba(78, 161, 255, 0.08);
+    border: 1px solid rgba(78, 161, 255, 0.18);
+    border-radius: 10px;
+}
+
+.tagsEditBox {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    min-height: 48px;
+    padding: 10px 12px;
+    background: rgba(78, 161, 255, 0.08);
+    border: 1px solid rgba(78, 161, 255, 0.18);
+    border-radius: 10px;
+}
+
+.tagEdit {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px 4px 8px;
+}
+
+.tagRemoveBtn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 2px;
+    line-height: 1;
+}
+
+.tagRemoveBtn:hover {
+    color: var(--danger);
+    background: none;
+}
+
+.tagInputWrap {
+    flex: 1;
+    min-width: 120px;
+}
+
+.tagInlineInput {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-main);
+    font-size: 14px;
+    padding: 4px 0;
+}
+
+
+/* ============================================================
+   ПРАВА КОЛОНКА — обкладинка, посилання, тривалість
+   ============================================================ */
+
+.linksBox {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-top: 8px;
+}
+
+.linkRow {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 10px;
+    padding: 6px 0;
+}
+
+.linkRow + .linkRow {
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.linkLabel {
+    color: var(--text-muted);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+}
+
+.linkValue a {
+    word-break: break-word;
+}
+
+.link-icon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    vertical-align: middle;
+    margin-right: 6px;
+    flex-shrink: 0;
+}
+
+.field-label-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+
+/* ============================================================
+   ОБКЛАДИНКА — dropzone
+   ============================================================ */
+
+.dropzone {
+    border: 2px dashed #555;
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    cursor: pointer;
+    background: rgba(255,255,255,0.03);
+}
+
+.dropzone:hover {
+    border-color: #777;
+}
+
+.dropzone.dragover {
+    border-color: #caa600;
+    background: rgba(255,255,0,0.06);
+}
+
+.dropzone-input {
+    display: block;
+    margin: 12px auto 0;
+    max-width: 100%;
+}
+
+.dropzone-title {
+    font-weight: 700;
+}
+
+.dropzone-hint {
+    color: #aaa;
+    font-size: 0.9em;
+    margin-top: 4px;
+}
+
+.help {
+    display: block;
+    color: #888;
+    margin-top: 6px;
 }
