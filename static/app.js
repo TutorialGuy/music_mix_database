@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
+  console.log("DOMContentLoaded спрацював");
   const trackList = document.getElementById("trackList");
   const editBtn = document.getElementById("editTracklistBtn");
   const editBar = document.getElementById("editBar");
@@ -391,6 +392,66 @@ document.addEventListener("DOMContentLoaded", () => {
       if (e.key === "Escape") cancelTitleBtn.click();
     });
 }
+
+// ----- dropzone для обкладинки -----
+  const dropzone = document.getElementById("dropzone");
+  const coverInput = document.getElementById("coverInput");
+  const coverForm = document.getElementById("coverForm");
+
+  if (dropzone && coverInput) {
+    let dragCounter = 0;
+
+    document.addEventListener("dragover", (e) => e.preventDefault());
+
+    document.addEventListener("drop", (e) => {
+      dragCounter = 0;
+      dropzone.classList.remove("dragover");
+
+      const file = e.dataTransfer.files[0];
+      if (!file) return;
+
+      e.preventDefault();
+
+      const hint = dropzone.querySelector(".dropzone-hint");
+      if (hint) hint.textContent = file.name;
+
+      const fd = new FormData();
+      fd.append("cover", file);
+      fetch(coverForm.action, { method: "POST", body: fd })
+        .then(resp => { if (resp.ok) window.location.reload(); })
+        .catch(() => alert("Помилка завантаження"));
+    });
+
+    document.addEventListener("dragenter", (e) => {
+      if (e.dataTransfer.types.includes("Files")) {
+        dragCounter++;
+        dropzone.classList.add("dragover");
+      }
+    });
+
+    document.addEventListener("dragleave", (e) => {
+      dragCounter--;
+      if (dragCounter <= 0) {
+        dragCounter = 0;
+        dropzone.classList.remove("dragover");
+      }
+    });
+
+    dropzone.addEventListener("click", (e) => {
+      if (e.target === coverInput) return;
+      coverInput.click();
+    });
+
+    coverInput.addEventListener("change", () => {
+      if (coverInput.files[0]) {
+        const hint = dropzone.querySelector(".dropzone-hint");
+        if (hint) hint.textContent = coverInput.files[0].name;
+        coverForm.submit();
+      }
+    });
+  }
+
+  if (!trackList || !editBtn) return;
 
   if (!trackList || !editBtn) return;
 
