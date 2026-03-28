@@ -117,10 +117,14 @@ def home():
 
 @app.route("/mixes")
 def mixes_page():
+    _t0 = time.perf_counter() #ТИМЧАСОВО ТАЙМЕР
+
     sort = request.args.get("sort", "added")
     direction = request.args.get("dir", "desc")
-
     raw_mixes = get_all_mixes_sorted(sort, direction)
+
+    _t1 = time.perf_counter() #ТИМЧАСОВО ТАЙМЕР
+    print(f"[PERF] get_all_mixes_sorted: {(_t1-_t0)*1000:.1f}ms")
 
     mixes = []
     for m in raw_mixes:
@@ -132,6 +136,9 @@ def mixes_page():
             "tags": tags,
             "duration_sec": duration_sec
         })
+
+    _t2 = time.perf_counter() #ТИМЧАСОВО ТАЙМЕР
+    print(f"[PERF] render_template: {(_t2 - _t1) * 1000:.1f}ms")
 
     return render_template(
         "mixes.html",
@@ -215,7 +222,7 @@ def add_mix_page():
                 save_to = os.path.join(COVERS_FOLDER, new_name)
                 file.save(save_to)
 
-                cover_path = f"covers/{new_name}"  # ✅ як у тебе зараз
+                cover_path = f"covers/{new_name}"
 
         # --- створення мікса ---
         if not error_msg:
@@ -332,9 +339,15 @@ def covers_file(filename):
 
 @app.route("/tags", methods=["GET"])
 def tags_page():
+    _t0 = time.perf_counter() #тимчасовий таймер
     rows = get_all_tags_with_counts()
+    _t1 = time.perf_counter()
     tags = [{"id": r[0], "name": r[1], "cnt": r[2]} for r in rows]
-    return render_template("tags.html", tags=tags, t=get_t(get_lang()))
+    _t2 = time.perf_counter()
+    result = render_template("tags.html", tags=tags, t=get_t(get_lang()))
+    _t3 = time.perf_counter()
+    print(f"[PERF /tags] db: {(_t1-_t0)*1000:.1f}ms | python: {(_t2-_t1)*1000:.1f}ms | render: {(_t3-_t2)*1000:.1f}ms") #тимчасовий таймер
+    return result
 
 @app.route("/tags/relations", methods=["GET", "POST"])
 def tags_relations():
@@ -436,8 +449,12 @@ def tag_page(tag_name):
 
 @app.route("/artists", methods=["GET"])
 def artists_page():
+    _t0 = time.perf_counter() #тимчасово таймер
     sort = request.args.get("sort", "name")
     artists_raw = get_all_artists()
+
+    _t1 = time.perf_counter() #тимчасово таймер
+    print(f"[PERF] get_all_artists: {(_t1 - _t0) * 1000:.1f}ms")
 
     if sort == "lastfm":
         artists_raw.sort(key=lambda a: (not a["lastfm_fetched"], a["name"]))
@@ -449,13 +466,20 @@ def artists_page():
         artists_raw.sort(key=lambda a: a["name"])
 
     all_implications = get_all_implications()
-    artist_implications = {}
-    for a in artists_raw:
-        tag_name = f"artist: {a['name']}"
-        implied = [imp for tag, imp in all_implications if tag == tag_name]
-        artist_implications[a["name"]] = implied
+    # будуємо словник одним проходом — O(N) замість O(N²)
+    implications_map = {}
+    for tag, imp in all_implications:
+        if tag.startswith("artist: "):
+            artist_name = tag[len("artist: "):]
+            implications_map.setdefault(artist_name, []).append(imp)
+
+    artist_implications = {a["name"]: implications_map.get(a["name"], []) for a in artists_raw}
 
     fetched = get_artists_lastfm_fetched()
+
+    _t2 = time.perf_counter() #тимчасово таймер
+    print(f"[PERF] render_template: {(_t2 - _t1) * 1000:.1f}ms")
+
     return render_template(
         "artists.html",
         artists=artists_raw,
@@ -543,6 +567,7 @@ def delete_artist_implication():
 
 @app.route("/mix/<int:mix_id>/import-tracks", methods=["POST"])
 def import_tracks(mix_id):
+    _t0 = time.perf_counter() #тимчасовий таймер
     mix = get_mix_by_id(mix_id)
     if not mix:
         return redirect("/mixes")
@@ -553,13 +578,12 @@ def import_tracks(mix_id):
 
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
 
+    _t1 = time.perf_counter()
     imported_artist_tags = []
-
     for line in lines:
         parsed = parse_track_line(line)
         if not parsed:
             continue
-
         if len(parsed) >= 4:
             artist     = (parsed[0] or "").strip()
             title      = (parsed[1] or "").strip()
@@ -572,25 +596,24 @@ def import_tracks(mix_id):
             soundcloud = ""
         else:
             continue
-
         ok = add_track_to_mix(mix_id, artist, title, soundcloud, time_value)
-
         if ok and artist:
             artist_tag = f"artist: {artist.lower().strip()}"
             if artist_tag and artist_tag not in imported_artist_tags:
                 imported_artist_tags.append(artist_tag)
 
+    _t2 = time.perf_counter()
     if imported_artist_tags:
         current_tags = get_mix_tags(mix_id)
         merged_tags = list(current_tags)
         merged_lower = [t.lower() for t in merged_tags]
-
         for tag in imported_artist_tags:
             if tag.lower() not in merged_lower:
                 merged_tags.append(tag)
-
         set_mix_tags(mix_id, merged_tags)
 
+    _t3 = time.perf_counter()
+    print(f"[PERF /import] parse+insert: {(_t2-_t1)*1000:.1f}ms | tags: {(_t3-_t2)*1000:.1f}ms | total: {(_t3-_t0)*1000:.1f}ms | tracks: {len(lines)}") #тимчасовий таймер
     return redirect(f"/mix/{mix_id}")
 
 @app.route("/mix/<int:mix_id>/delete-tracks", methods=["POST"])
