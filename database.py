@@ -7,6 +7,8 @@ DB_NAME = "music.db"
 def get_connection():
     conn = sqlite3.connect(DB_NAME)
     conn.execute("PRAGMA foreign_keys = ON;")
+    conn.execute("PRAGMA journal_mode = WAL;")
+    conn.execute("PRAGMA synchronous = NORMAL;")
     return conn
 
 def init_db():
@@ -95,6 +97,14 @@ def init_db():
             cur.execute("ALTER TABLE tags ADD COLUMN lastfm_fetched INTEGER DEFAULT 0")
         except sqlite3.OperationalError:
             pass
+
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_mix_tracks_mix_id ON mix_tracks(mix_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_mix_tracks_pos ON mix_tracks(mix_id, pos)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_mix_tags_mix_id ON mix_tags(mix_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_mix_tags_tag_id ON mix_tags(tag_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_tag_implications_tag ON tag_implications(tag_name)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_mixes_added ON mixes(added_at)")
 
         conn.commit()
 
@@ -272,6 +282,39 @@ def add_track_to_mix(mix_id: int, artist: str, title: str, soundcloud: str, time
         conn.commit()
 
     return True
+
+def add_tracks_bulk(mix_id: int, tracks: list[tuple]) -> int:
+    if not tracks:
+        return 0
+
+    with get_connection() as conn:
+        cur = conn.cursor()
+
+        cur.execute("SELECT COALESCE(MAX(pos), 0) FROM mix_tracks WHERE mix_id=?", (mix_id,))
+        start_pos = cur.fetchone()[0]
+
+        rows = []
+        for i, (artist, title, soundcloud, time_value) in enumerate(tracks):
+            title = (title or "").strip()
+            if not title:
+                continue
+            rows.append((
+                mix_id,
+                artist.strip() if artist else None,
+                title,
+                soundcloud.strip() if soundcloud else None,
+                time_value.strip() if time_value else None,
+                start_pos + i + 1
+            ))
+
+        cur.executemany("""
+            INSERT INTO mix_tracks (mix_id, artist, title, soundcloud, time, pos)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, rows)
+
+        conn.commit()
+
+    return len(rows)
 
 def get_tracks_for_mix(mix_id):
     with get_connection() as conn:
