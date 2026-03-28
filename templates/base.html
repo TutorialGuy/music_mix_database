@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="{{ request.cookies.get('lang', 'uk') }}">
 <head>
     <meta charset="UTF-8">
     <title>{% block title %}Music Mix Database{% endblock %}</title>
@@ -17,11 +17,26 @@
 <div id="top"></div>
 <div class="container">
 
+<div style="text-align:right; margin-bottom:8px; display:flex; justify-content:flex-end; gap:6px;">
+  <a href="/set-lang/uk"
+     style="font-size:22px; text-decoration:none; line-height:1;
+            opacity:{% if request.cookies.get('lang', 'uk') == 'uk' %}1{% else %}0.3{% endif %};
+            transition:opacity 0.2s;">
+    🇺🇦
+  </a>
+  <a href="/set-lang/en"
+     style="font-size:22px; text-decoration:none; line-height:1;
+            opacity:{% if request.cookies.get('lang', 'uk') == 'en' %}1{% else %}0.3{% endif %};
+            transition:opacity 0.2s;">
+    🇬🇧
+  </a>
+</div>
+
 {% block content %}{% endblock %}
 
 <!-- Кнопка вгору (поки завжди видима; зробимо "тільки при скролі" пізніше) -->
 <a id="btnTop" href="#top"
-   title="Вгору"
+   title="{{ t.btn_top if t is defined else 'Вгору' }}"
    style="
      position:fixed;
      right:18px;

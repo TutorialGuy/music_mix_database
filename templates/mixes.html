@@ -1,59 +1,49 @@
 {% extends "base.html" %}
 
-{% block title %}Список міксів{% endblock %}
+{% block title %}{{ t.mixes_page_title }}{% endblock %}
 
 {% block content %}
-<h2>Список міксів</h2>
+<h2>{{ t.mixes_page_title }}</h2>
 
 <form method="get" style="margin-bottom:10px;">
-  <label>Сортування:</label>
+  <label>{{ t.sort_label }}</label>
   <select name="sort">
-    <option value="added" {% if current_sort=='added' %}selected{% endif %}>За датою додавання</option>
-    <option value="title" {% if current_sort=='title' %}selected{% endif %}>За назвою</option>
-    <option value="duration" {% if current_sort=='duration' %}selected{% endif %}>За тривалістю</option>
+    <option value="added" {% if current_sort=='added' %}selected{% endif %}>{{ t.sort_by_date }}</option>
+    <option value="title" {% if current_sort=='title' %}selected{% endif %}>{{ t.sort_by_title }}</option>
+    <option value="duration" {% if current_sort=='duration' %}selected{% endif %}>{{ t.sort_by_duration }}</option>
   </select>
-
   <select name="dir">
-    <option value="desc" {% if current_dir=='desc' %}selected{% endif %}>Спадання</option>
-    <option value="asc" {% if current_dir=='asc' %}selected{% endif %}>Зростання</option>
+    <option value="desc" {% if current_dir=='desc' %}selected{% endif %}>{{ t.sort_dir_desc }}</option>
+    <option value="asc" {% if current_dir=='asc' %}selected{% endif %}>{{ t.sort_dir_asc }}</option>
   </select>
-
-  <button type="submit">Застосувати</button>
+  <button type="submit">{{ t.sort_apply }}</button>
 </form>
 
-<!-- верхні кнопки -->
 <p style="margin-bottom:20px;">
-    <a href="/" style="margin-right:15px;">🏠 На головну</a>
-    <a href="/add-mix">➕ Додати мікс</a>
+    <a href="/" style="margin-right:15px;">🏠 {{ t.nav_home }}</a>
+    <a href="/add-mix">➕ {{ t.nav_add_mix }}</a>
 </p>
 
 {% if not mixes %}
-    <p>Поки що немає міксів.</p>
+    <p>{{ t.no_mixes }}</p>
 {% else %}
     <ul style="list-style:none;padding:0;">
         {% for mix in mixes %}
             <li style="display:flex;align-items:center;margin-bottom:10px;">
-
                 {% if mix.cover %}
                     <img src="/{{ mix.cover }}"
                          style="width:60px;height:60px;object-fit:cover;border-radius:8px;margin-right:10px;">
                 {% endif %}
-
-                <a href="/mix/{{ mix.id }}">
-                  <b>{{ mix.title }}</b>
-                </a>
-
+                <a href="/mix/{{ mix.id }}"><b>{{ mix.title }}</b></a>
                 {% if mix.duration_sec %}
                   <span style="color:gray; margin-left:8px;">
                     ⏱ {{ format_seconds_to_hms(mix.duration_sec) }}
                   </span>
                 {% endif %}
-
                 <form method="post" action="/delete-mix/{{ mix.id }}" style="display:inline;"
-                      onsubmit="return confirm('Ви впевнені, що бажаєте видалити цей мікс?');">
-                  <button type="submit" class="danger" style="margin-left:12px;">видалити</button>
+                      onsubmit="return confirm('{{ t.mix_delete_confirm }}');">
+                  <button type="submit" class="danger" style="margin-left:12px;">{{ t.mix_delete }}</button>
                 </form>
-
             </li>
         {% endfor %}
     </ul>
@@ -61,10 +51,9 @@
 
 <hr style="margin-top:30px;">
 
-<!-- нижні кнопки -->
 <p style="margin-top:15px;">
-    <a href="/" style="margin-right:15px;">🏠 На головну</a>
-    <a href="/add-mix">➕ Додати мікс</a>
+    <a href="/" style="margin-right:15px;">🏠 {{ t.nav_home }}</a>
+    <a href="/add-mix">➕ {{ t.nav_add_mix }}</a>
 </p>
 
 {% endblock %}

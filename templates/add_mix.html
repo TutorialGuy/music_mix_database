@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}Додати мікс{% endblock %}
+{% block title %}{{ t.add_mix_title }}{% endblock %}
 
 {% block content %}
-<h2>Додати мікс</h2>
+<h2>{{ t.add_mix_title }}</h2>
 
 <p style="margin-bottom:15px;">
-    <a href="/" style="margin-right:15px;">🏠 На головну</a>
-    <a href="/mixes">⬅️ Назад до списку міксів</a>
+    <a href="/" style="margin-right:15px;">🏠 {{ t.nav_home }}</a>
+    <a href="/mixes">⬅️ {{ t.nav_back_mixes }}</a>
 </p>
 
 {% if error_msg %}
@@ -16,7 +16,7 @@
 
 <form method="post" action="/add-mix" enctype="multipart/form-data">
   <p>
-    Назва *<br>
+    {{ t.field_title }}<br>
     <input name="title" value="{{ title_value or '' }}" style="width:420px;">
   </p>
 
@@ -41,42 +41,42 @@
       <img src="{{ url_for('static', filename='icons/spotify.svg') }}" class="link-icon" alt="Spotify">
       Spotify
     </span><br>
-    <input name="spotify" value="{{ spotify_value or '' }}" placeholder="Spotify URL" style="width:420px;">
+    <input name="spotify" value="{{ spotify_value or '' }}" style="width:420px;">
   </p>
 
   <p>
-  Теги (через кому)<br>
-  <div class="tagAutocompleteWrap" style="width:420px;">
-    <input id="addMixTagsInput"
-           name="tags"
-           value="{{ tags_value or '' }}"
-           placeholder="drum and bass, liquid dnb"
-           style="width:100%;"
-           autocomplete="off">
-    <div id="addMixTagsSuggest" class="tagSuggestBox"></div>
-  </div>
-</p>
+    {{ t.field_tags }}<br>
+    <div class="tagAutocompleteWrap" style="width:420px;">
+      <input id="addMixTagsInput"
+             name="tags"
+             value="{{ tags_value or '' }}"
+             placeholder="{{ t.field_tags_placeholder }}"
+             style="width:100%;"
+             autocomplete="off">
+      <div id="addMixTagsSuggest" class="tagSuggestBox"></div>
+    </div>
+  </p>
 
-<script id="addMixAllTagsData" type="application/json">{{ all_tags|tojson }}</script>
+  <script id="addMixAllTagsData" type="application/json">{{ all_tags|tojson }}</script>
 
   <p>
-    Тривалість (MM:SS або HH:MM:SS)<br>
+    {{ t.field_duration }}<br>
     <input name="duration" value="{{ duration_value or '' }}" placeholder="01:23:45" style="width:200px;">
   </p>
 
   <p>
-    Обкладинка<br>
+    {{ t.field_cover }}<br>
     <input type="file" name="cover" accept="image/*">
   </p>
 
-  <button type="submit">Зберегти</button>
+  <button type="submit">{{ t.btn_save }}</button>
 </form>
 
 <hr style="margin-top:25px;">
 
 <p style="margin-top:15px;">
-    <a href="/" style="margin-right:15px;">🏠 На головну</a>
-    <a href="/mixes">⬅️ Назад до списку міксів</a>
+    <a href="/" style="margin-right:15px;">🏠 {{ t.nav_home }}</a>
+    <a href="/mixes">⬅️ {{ t.nav_back_mixes }}</a>
 </p>
 
 {% endblock %}

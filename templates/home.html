@@ -5,7 +5,6 @@
 {% block content %}
 <h1>Music Mix Database</h1>
 
-<!-- Статистика -->
 {% set bg_mix = random_mix %}
 <div style="
   position: relative;
@@ -35,50 +34,48 @@
 
   <div style="position:relative; z-index:2; padding:20px; text-align:center;">
     <div style="font-size:28px; font-weight:700; text-shadow:0 1px 6px rgba(0,0,0,0.8);">{{ stats.mixes }}</div>
-    <div style="font-size:13px; color:#ccc; text-shadow:0 1px 4px rgba(0,0,0,0.8);">міксів</div>
+    <div style="font-size:13px; color:#ccc; text-shadow:0 1px 4px rgba(0,0,0,0.8);">{{ t.mixes_count }}</div>
   </div>
   <div style="position:relative; z-index:2; padding:20px; text-align:center;">
     <div style="font-size:28px; font-weight:700; text-shadow:0 1px 6px rgba(0,0,0,0.8);">{{ stats.tracks }}</div>
-    <div style="font-size:13px; color:#ccc; text-shadow:0 1px 4px rgba(0,0,0,0.8);">треків</div>
+    <div style="font-size:13px; color:#ccc; text-shadow:0 1px 4px rgba(0,0,0,0.8);">{{ t.tracks_count }}</div>
   </div>
   <div style="position:relative; z-index:2; padding:20px; text-align:center;">
     <div style="font-size:28px; font-weight:700; text-shadow:0 1px 6px rgba(0,0,0,0.8);">{{ stats.tags }}</div>
-    <div style="font-size:13px; color:#ccc; text-shadow:0 1px 4px rgba(0,0,0,0.8);">тегів</div>
+    <div style="font-size:13px; color:#ccc; text-shadow:0 1px 4px rgba(0,0,0,0.8);">{{ t.tags_count }}</div>
   </div>
 </div>
 
-<!-- Навігація -->
 <p>
-    <a href="/mixes">📚 Список міксів</a> ·
-    <a href="/add-mix">➕ Додати мікс</a> ·
-    <a href="/tags">🏷️ Теги</a> ·
-    <a href="/tags/bubbles">🫧 Карта тегів</a> ·
-    <a href="/artists">🎵 Артисти</a>
+    <a href="/mixes">📚 {{ t.nav_mixes }}</a> ·
+    <a href="/add-mix">➕ {{ t.nav_add_mix }}</a> ·
+    <a href="/tags">🏷️ {{ t.nav_tags }}</a> ·
+    <a href="/tags/bubbles">🫧 {{ t.nav_tag_map }}</a> ·
+    <a href="/artists">🎵 {{ t.nav_artists }}</a>
 </p>
 
 <hr style="margin:16px 0;">
 
 <div style="display:grid; grid-template-columns:1fr 400px; gap:2rem; align-items:start;">
 
-  <!-- Ліва колонка -->
   <div>
-    <h3>Пошук</h3>
+    <h3>{{ t.search_title }}</h3>
     <form method="get" action="/">
         <input name="q" value="{{ q }}"
-               placeholder="Назва треку, артист або мікс..."
+               placeholder="{{ t.search_placeholder }}"
                style="width:100%; max-width:420px; padding:6px; box-sizing:border-box;">
-        <button type="submit" style="margin-left:6px;">Пошук</button>
+        <button type="submit" style="margin-left:6px;">{{ t.search_btn }}</button>
         {% if q %}
-            <a href="/" style="margin-left:10px;">Очистити</a>
+            <a href="/" style="margin-left:10px;">{{ t.search_clear }}</a>
         {% endif %}
     </form>
 
     {% if tag %}
-        <h3 style="margin-top:20px;">Мікси з тегом: <span class="tag tagDisplay">{{ tag }}</span></h3>
+        <h3 style="margin-top:20px;">{{ t.tag_mixes_title }} <span class="tag tagDisplay">{{ tag }}</span></h3>
         {% if not mix_results %}
-            <p>Немає міксів з цим тегом.</p>
+            <p>{{ t.tag_no_results }}</p>
         {% else %}
-            <p style="color:var(--text-muted);">Знайдено: {{ mix_results|length }}</p>
+            <p style="color:var(--text-muted);">{{ t.found_count }} {{ mix_results|length }}</p>
             <ul style="list-style:none; padding:0;">
                 {% for m in mix_results %}
                     <li style="display:flex; align-items:center; margin-bottom:10px;">
@@ -93,12 +90,12 @@
         {% endif %}
 
     {% elif q %}
-        <h3 style="margin-top:20px;">Результати для: {{ q }}</h3>
+        <h3 style="margin-top:20px;">{{ t.search_results_title }} {{ q }}</h3>
         {% if not mix_results and not track_results %}
-            <p>Нічого не знайдено.</p>
+            <p>{{ t.no_results }}</p>
         {% else %}
             {% if mix_results %}
-                <h4>Мікси</h4>
+                <h4>{{ t.results_mixes }}</h4>
                 <ul style="list-style:none;padding-left:0;">
                     {% for m in mix_results %}
                         <li style="display:flex;align-items:center;margin-bottom:10px;">
@@ -112,12 +109,12 @@
                 </ul>
             {% endif %}
             {% if track_results %}
-                <h4>Треки</h4>
+                <h4>{{ t.results_tracks }}</h4>
                 <ul>
                     {% for r in track_results %}
                         <li style="margin-bottom:8px;">
                             <b>{{ r.track_label_html|safe }}</b><br>
-                            у міксі: <a href="/mix/{{ r.mix_id }}">{{ r.mix_title_html|safe }}</a>
+                            {{ t.track_in_mix }} <a href="/mix/{{ r.mix_id }}">{{ r.mix_title_html|safe }}</a>
                         </li>
                     {% endfor %}
                 </ul>
@@ -126,7 +123,7 @@
 
     {% else %}
         {% if recent_mixes %}
-        <h3 style="margin-top:20px;">Останні додані</h3>
+        <h3 style="margin-top:20px;">{{ t.recent_mixes }}</h3>
         <ul style="list-style:none; padding:0;">
             {% for mix in recent_mixes %}
                 <li style="display:flex; align-items:center; margin-bottom:10px;">
@@ -156,7 +153,6 @@
     {% endif %}
   </div>
 
-  <!-- Права колонка — випадковий мікс -->
   {% if random_mix %}
   <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow:hidden;">
     {% if random_mix[2] %}
@@ -167,11 +163,11 @@
     {% else %}
       <a href="/mix/{{ random_mix[0] }}"
          style="display:block; width:100%; aspect-ratio:16/9; background:var(--bg-secondary); display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:13px; text-decoration:none;">
-        немає обкладинки
+        {{ t.no_cover }}
       </a>
     {% endif %}
     <div style="padding:10px 12px;">
-      <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">Випадковий мікс</div>
+      <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">{{ t.random_mix }}</div>
       <a href="/mix/{{ random_mix[0] }}" style="font-size:14px; font-weight:500;">{{ random_mix[1] }}</a>
     </div>
   </div>

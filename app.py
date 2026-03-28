@@ -21,6 +21,7 @@ from utils import (
     parse_track_line, parse_tags_input,
     parse_duration_to_seconds, format_seconds_to_hms, normalize_url
 )
+from translations import get_t
 import os
 import time
 from werkzeug.utils import secure_filename
@@ -33,6 +34,17 @@ LASTFM_API_KEY = os.getenv("LASTFM_API_KEY")
 
 app = Flask(__name__)
 init_db()
+
+@app.route("/set-lang/<lang>")
+def set_lang(lang):
+    from flask import make_response
+    resp = make_response(redirect(request.referrer or "/"))
+    resp.set_cookie("lang", lang if lang in ("uk", "en") else "uk",
+                    max_age=60*60*24*365)
+    return resp
+
+def get_lang():
+    return request.cookies.get("lang", "uk")
 
 # Має бути перевірка на 3 MB, але треба пропустити хоч щось, щоб зберегти поля
 app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024
@@ -99,7 +111,8 @@ def home():
         mix_results=mix_results,
         stats=stats,
         recent_mixes=recent_mixes,
-        random_mix=random_mix
+        random_mix=random_mix,
+        t=get_t(get_lang())
     )
 
 @app.route("/mixes")
@@ -124,7 +137,8 @@ def mixes_page():
         "mixes.html",
         mixes=mixes,
         current_sort=sort,
-        current_dir=direction
+        current_dir=direction,
+        t=get_t(get_lang())
     )
 
 @app.route("/add-mix", methods=["GET", "POST"])
@@ -140,6 +154,7 @@ def add_mix_page():
     duration_sec = None
 
     if request.method == "POST":
+        t = get_t(get_lang())
         # --- поля ---
         title_value = request.form.get("title", "").strip()
         youtube_value = request.form.get("youtube", "").strip()
@@ -158,11 +173,11 @@ def add_mix_page():
         duration_value = request.form.get("duration", "").strip()
         duration_sec = parse_duration_to_seconds(duration_value)
         if duration_value and duration_sec is None:
-            error_msg = "❌ Тривалість має бути у форматі MM:SS або HH:MM:SS."
+            error_msg = t["error_duration"]
 
         # --- валідація назви ---
         if not title_value:
-            error_msg = "❌ Назва міксу — обов'язкова."
+            error_msg = t["error_title_required"]
 
         # --- обкладинка ---
         cover_path = None
@@ -173,14 +188,14 @@ def add_mix_page():
             ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
 
             if ext not in ALLOWED_EXT:
-                error_msg = "❌ Непідтримуваний формат (jpeg/png/bmp/webp/gif)."
+                error_msg = t["error_cover_format_add"]
             else:
                 # розмір
                 file.stream.seek(0, os.SEEK_END)
                 size_bytes = file.stream.tell()
                 file.stream.seek(0)
                 if size_bytes > 3 * 1024 * 1024:
-                    error_msg = "❌ Файл завеликий (максимум 3MB)."
+                    error_msg = t["error_cover_size_add"]
                 else:
                     # пікселі
                     try:
@@ -188,9 +203,9 @@ def add_mix_page():
                         w, h = img.size
                         file.stream.seek(0)
                         if w > 3000 or h > 3000:
-                            error_msg = "❌ Зображення занадто велике (максимум 3000×3000)."
+                            error_msg = t["error_cover_pixels_add"]
                     except (OSError, ValueError):
-                        error_msg = "❌ Неможливо прочитати зображення. Спробуй інший файл."
+                        error_msg = t["error_cover_bad_add"]
 
             if not error_msg:
                 safe_title = slugify(title_value) or "mix"
@@ -230,25 +245,28 @@ def add_mix_page():
         spotify_value=spotify_value,
         tags_value=tags_value,
         all_tags=all_tags,
-        duration_value=duration_value
+        duration_value=duration_value,
+        t=get_t(get_lang())
     )
 
 @app.route("/mix/<int:mix_id>", methods=["GET"])
 def mix_detail(mix_id):
     mix = get_mix_by_id(mix_id)
     if not mix:
-        return "<h2>Мікс не знайдено</h2><p><a href='/mixes'>Назад</a></p>"
+        t = get_t(get_lang())
+        return f"<h2>{t['mix_not_found']}</h2><p><a href='/mixes'>{t['btn_back']}</a></p>"
     # помилки обкладинки
     cover_error_msg = ""
     cover_err = request.args.get("cover_err", "")
+    t = get_t(get_lang())
     if cover_err == "format":
-        cover_error_msg = "❌ Непідтримуваний формат обкладинки (jpeg/png/bmp/webp/gif)."
+        cover_error_msg = t["error_cover_format"]
     elif cover_err == "size":
-        cover_error_msg = "❌ Файл обкладинки завеликий (максимум 3MB)."
+        cover_error_msg = t["error_cover_size"]
     elif cover_err == "pixels":
-        cover_error_msg = "❌ Зображення обкладинки занадто велике (максимум 3000×3000)."
+        cover_error_msg = t["error_cover_pixels"]
     elif cover_err == "bad":
-        cover_error_msg = "❌ Не вдалося прочитати зображення. Спробуй інший файл."
+        cover_error_msg = t["error_cover_bad"]
 
     tracks_raw = get_tracks_for_mix(mix_id)
 
@@ -295,7 +313,8 @@ def mix_detail(mix_id):
         tracks=tracks,
         tags=tags_with_counts,
         tags_input=tags_input,
-        all_tags=all_tags
+        all_tags=all_tags,
+        t=get_t(get_lang())
     )
 
 @app.route("/mix/<int:mix_id>/update-duration", methods=["POST"])
@@ -315,7 +334,7 @@ def covers_file(filename):
 def tags_page():
     rows = get_all_tags_with_counts()
     tags = [{"id": r[0], "name": r[1], "cnt": r[2]} for r in rows]
-    return render_template("tags.html", tags=tags)
+    return render_template("tags.html", tags=tags, t=get_t(get_lang()))
 
 @app.route("/tags/relations", methods=["GET", "POST"])
 def tags_relations():
@@ -370,7 +389,8 @@ def tags_relations():
         aliases=aliases,
         implications=implications,
         error_msg=error_msg,
-        success_msg=success_msg
+        success_msg=success_msg,
+        t=get_t(get_lang())
     )
 
 @app.route("/tags/bubbles")
@@ -386,7 +406,12 @@ def tags_bubbles():
         if a in name_to_id and b in name_to_id
     ]
 
-    return render_template("tags_bubbles.html", tags_data=tags_data, links_data=links_data)
+    return render_template(
+        "tags_bubbles.html",
+        tags_data=tags_data,
+        links_data=links_data,
+        t=get_t(get_lang())
+    )
 
 @app.route("/tags/delete", methods=["POST"])
 def delete_tags_page():
@@ -436,7 +461,8 @@ def artists_page():
         artists=artists_raw,
         artist_implications=artist_implications,
         lastfm_fetched=fetched,
-        current_sort=sort
+        current_sort=sort,
+        t=get_t(get_lang())
     )
 
 @app.route("/artists/fetch-tags/<path:artist_name>", methods=["POST"])
@@ -718,7 +744,8 @@ def delete_mix_page(mix_id):
 def update_mix_title_route(mix_id):
     title = request.form.get("title", "").strip()
     if not title:
-        return jsonify({"ok": False, "error": "Назва не може бути порожньою"}), 400
+        t = get_t(get_lang())
+        return jsonify({"ok": False, "error": t["error_title_empty"]}), 400
     update_mix_title(mix_id, title)
     return jsonify({"ok": True, "title": title})
 

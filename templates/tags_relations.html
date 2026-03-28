@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Аліаси та імплікації тегів{% endblock %}
+{% block title %}{{ t.relations_title }}{% endblock %}
 
 {% block content %}
-<h2>🔗 Аліаси та імплікації тегів</h2>
+<h2>🔗 {{ t.relations_title }}</h2>
 
 <p>
-  <a href="/" style="margin-right:12px;">🏠 На головну</a>
-  <a href="/tags">🏷️ Всі теги</a>
+  <a href="/" style="margin-right:12px;">🏠 {{ t.nav_home }}</a>
+  <a href="/tags">🏷️ {{ t.nav_all_tags }}</a>
 </p>
 
 {% if error_msg %}
@@ -18,20 +18,16 @@
 
 <div style="display:grid; grid-template-columns:1fr 1fr; gap:2rem; margin-top:1rem;">
 
-  <!-- Аліаси -->
   <div>
-    <h3>Аліаси</h3>
-    <p style="color:var(--text-muted); font-size:13px;">
-      Аліас автоматично замінюється на цільовий тег при збереженні.
-      Наприклад: <i>dnb → drum and bass</i>
-    </p>
+    <h3>{{ t.aliases_title }}</h3>
+    <p style="color:var(--text-muted); font-size:13px;">{{ t.aliases_hint }}</p>
 
     <form method="post" style="display:flex; gap:8px; margin-bottom:16px; align-items:center;">
       <input type="hidden" name="action" value="add_alias">
-      <input name="alias_name" placeholder="аліас (напр. dnb)" style="width:160px;">
+      <input name="alias_name" placeholder="{{ t.aliases_placeholder_from }}" style="width:160px;">
       <span style="color:var(--text-muted);">→</span>
-      <input name="target_name" placeholder="цільовий тег" style="width:160px;">
-      <button type="submit">Додати</button>
+      <input name="target_name" placeholder="{{ t.aliases_placeholder_to }}" style="width:160px;">
+      <button type="submit">{{ t.btn_add }}</button>
     </form>
 
     {% if aliases %}
@@ -56,24 +52,20 @@
       {% endfor %}
     </table>
     {% else %}
-      <p style="color:var(--text-muted);">Аліасів ще немає.</p>
+      <p style="color:var(--text-muted);">{{ t.aliases_empty }}</p>
     {% endif %}
   </div>
 
-  <!-- Імплікації -->
   <div>
-    <h3>Імплікації</h3>
-    <p style="color:var(--text-muted); font-size:13px;">
-      При додаванні тегу автоматично додається пов'язаний.
-      Наприклад: <i>neurofunk → drum and bass</i>
-    </p>
+    <h3>{{ t.implications_title }}</h3>
+    <p style="color:var(--text-muted); font-size:13px;">{{ t.implications_hint }}</p>
 
     <form method="post" style="display:flex; gap:8px; margin-bottom:16px; align-items:center;">
       <input type="hidden" name="action" value="add_implication">
-      <input name="tag_name" placeholder="піджанр (напр. neurofunk)" style="width:160px;">
+      <input name="tag_name" placeholder="{{ t.implications_placeholder_from }}" style="width:160px;">
       <span style="color:var(--text-muted);">→</span>
-      <input name="implies_name" placeholder="батьківський тег" style="width:160px;">
-      <button type="submit">Додати</button>
+      <input name="implies_name" placeholder="{{ t.implications_placeholder_to }}" style="width:160px;">
+      <button type="submit">{{ t.btn_add }}</button>
     </form>
 
     {% if implications %}
@@ -99,7 +91,7 @@
       {% endfor %}
     </table>
     {% else %}
-      <p style="color:var(--text-muted);">Імплікацій ще немає.</p>
+      <p style="color:var(--text-muted);">{{ t.implications_empty }}</p>
     {% endif %}
   </div>
 

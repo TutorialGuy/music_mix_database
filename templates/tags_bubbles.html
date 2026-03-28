@@ -1,13 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Карта тегів{% endblock %}
+{% block title %}{{ t.tag_map_title }}{% endblock %}
 
 {% block content %}
-<h2>🫧 Карта тегів</h2>
+<h2>🫧 {{ t.tag_map_title }}</h2>
 
 <p>
-  <a href="/" style="margin-right:12px;">🏠 На головну</a>
-  <a href="/mixes" style="margin-right:12px;">📚 Список міксів</a>
-  <a href="/tags">🏷️ Всі теги</a>
+  <a href="/" style="margin-right:12px;">🏠 {{ t.nav_home }}</a>
+  <a href="/mixes" style="margin-right:12px;">📚 {{ t.nav_mixes }}</a>
+  <a href="/tags">🏷️ {{ t.nav_all_tags }}</a>
 </p>
 
 <div id="tooltip" style="position:fixed; display:none; background:rgba(0,0,0,0.75); color:#fff; padding:6px 10px; border-radius:6px; font-size:13px; pointer-events:none; z-index:100;"></div>
@@ -16,11 +16,13 @@
 
 <script id="tagsJson" type="application/json">{{ tags_data | tojson }}</script>
 <script id="linksJson" type="application/json">{{ links_data | tojson }}</script>
+<script id="i18n" type="application/json">{{ {"mixes": t.tag_map_tooltip} | tojson }}</script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script>
 const nodes = JSON.parse(document.getElementById("tagsJson").textContent);
 const links = JSON.parse(document.getElementById("linksJson").textContent);
+const i18n = JSON.parse(document.getElementById("i18n").textContent);
 const tooltip = document.getElementById("tooltip");
 
 const container = document.getElementById("graph");
@@ -111,7 +113,7 @@ node.on("mousemove", (e, d) => {
   tooltip.style.display = "block";
   tooltip.style.left = (e.clientX + 14) + "px";
   tooltip.style.top = (e.clientY - 30) + "px";
-  tooltip.textContent = `${d.name} · ${d.cnt} міксів`;
+  tooltip.textContent = `${d.name} · ${d.cnt} ${i18n.mixes}`;
 })
 .on("mouseleave", () => tooltip.style.display = "none")
 .on("click", (e, d) => {

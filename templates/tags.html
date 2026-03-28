@@ -1,29 +1,28 @@
 {% extends "base.html" %}
-{% block title %}Теги{% endblock %}
+{% block title %}{{ t.tags_title }}{% endblock %}
 
 {% block content %}
-<h2>🏷️ Теги</h2>
+<h2>🏷️ {{ t.tags_title }}</h2>
 
 <p>
-  <a href="/" style="margin-right:12px;">🏠 На головну</a>
-  <a href="/mixes" style="margin-right:12px;">📚 Список міксів</a>
-  <a href="/tags/bubbles" style="margin-right:12px;">🫧 Карта тегів</a>
-  <a href="/tags/relations">🔗 Аліаси та імплікації</a>
+  <a href="/" style="margin-right:12px;">🏠 {{ t.nav_home }}</a>
+  <a href="/mixes" style="margin-right:12px;">📚 {{ t.nav_mixes }}</a>
+  <a href="/tags/bubbles" style="margin-right:12px;">🫧 {{ t.nav_tag_bubbles }}</a>
+  <a href="/tags/relations">🔗 {{ t.nav_tags_relations }}</a>
 </p>
 
-<button id="toggleDelete" type="button">🗑️ Видалити теги</button>
+<button id="toggleDelete" type="button">{{ t.btn_delete_tags }}</button>
 
 <form id="deleteForm" method="post" action="/tags/delete" style="margin-top:12px; display:none;"
-      onsubmit="return confirm('Ви впевнені, що бажаєте видалити вибрані теги? Вони також зникнуть з усіх міксів.');">
-  <button type="submit" style="margin-bottom:12px;">✅ Підтвердити видалення вибраних</button>
-
+      onsubmit="return confirm('{{ t.tags_delete_confirm }}');">
+  <button type="submit" style="margin-bottom:12px;">{{ t.btn_confirm_delete }}</button>
   <div>
-    {% for t in tags %}
+    {% for tag in tags %}
       <div style="margin:6px 0;">
         <label>
-          <input type="checkbox" name="tag_id" value="{{ t.id }}">
-          <b>{{ t.name }}</b>
-          <span style="color:gray;">(використано: {{ t.cnt }})</span>
+          <input type="checkbox" name="tag_id" value="{{ tag.id }}">
+          <b>{{ tag.name }}</b>
+          <span style="color:gray;">({{ t.tag_used }} {{ tag.cnt }})</span>
         </label>
       </div>
     {% endfor %}
@@ -31,12 +30,12 @@
 </form>
 
 <div id="normalList" style="margin-top:14px; display:flex; flex-wrap:wrap; gap:8px;">
-  {% for t in tags %}
-    <a href="/tag/{{ t.name }}"
-       class="tag tagDisplay {% if t.name.startswith('artist: ') %}tag-artist{% elif t.name == 'dead source' %}tag-dead-source{% elif t.name == 'empty tracklist' %}tag-empty-tracklist{% endif %}"
+  {% for tag in tags %}
+    <a href="/tag/{{ tag.name }}"
+       class="tag tagDisplay {% if tag.name.startswith('artist: ') %}tag-artist{% elif tag.name == 'dead source' %}tag-dead-source{% elif tag.name == 'empty tracklist' %}tag-empty-tracklist{% endif %}"
        style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
-      {{ t.name }}
-      <span class="tag-count">{{ t.cnt }}</span>
+      {{ tag.name }}
+      <span class="tag-count">{{ tag.cnt }}</span>
     </a>
   {% endfor %}
 </div>
@@ -51,7 +50,7 @@
     active = !active;
     form.style.display = active ? "block" : "none";
     normal.style.display = active ? "none" : "block";
-    btn.textContent = active ? "↩️ Скасувати видалення" : "🗑️ Видалити теги";
+    btn.textContent = active ? "{{ t.btn_cancel_delete }}" : "{{ t.btn_delete_tags }}";
   });
 </script>
 

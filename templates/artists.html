@@ -1,36 +1,33 @@
 {% extends "base.html" %}
-{% block title %}Артисти{% endblock %}
+{% block title %}{{ t.artists_title }}{% endblock %}
 
 {% block content %}
-<h2>🎵 Артисти та їх жанри</h2>
+<h2>🎵 {{ t.artists_title }}</h2>
 
 <p>
-  <a href="/" style="margin-right:12px;">🏠 На головну</a>
-  <a href="/tags" style="margin-right:12px;">🏷️ Теги</a>
-  <a href="/tags/relations">🔗 Аліаси та імплікації</a>
+  <a href="/" style="margin-right:12px;">🏠 {{ t.nav_home }}</a>
+  <a href="/tags" style="margin-right:12px;">🏷️ {{ t.nav_tags }}</a>
+  <a href="/tags/relations">🔗 {{ t.nav_tags_relations }}</a>
 </p>
 
-<p style="color:var(--text-muted); font-size:13px;">
-  Натисни «Last.fm» поряд з артистом щоб підтягнути його жанри автоматично.
-  Жанри зберігаються як імплікації — тег артиста буде автоматично тягнути їх при збереженні міксу.
-</p>
+<p style="color:var(--text-muted); font-size:13px;">{{ t.artists_hint }}</p>
 
 <form method="get" style="margin-bottom:14px; display:flex; align-items:center; gap:8px;">
-  <label style="font-size:13px; color:var(--text-muted);">Сортування:</label>
+  <label style="font-size:13px; color:var(--text-muted);">{{ t.sort_label }}</label>
   <select name="sort" style="font-size:13px;">
-    <option value="name"         {% if current_sort=='name' %}selected{% endif %}>За алфавітом</option>
-    <option value="lastfm" {% if current_sort=='lastfm' %}selected{% endif %}>Last.fm (спочатку з галочкою)</option>
-    <option value="mixes"        {% if current_sort=='mixes' %}selected{% endif %}>За кількістю міксів</option>
-    <option value="implications" {% if current_sort=='implications' %}selected{% endif %}>За кількістю жанрів</option>
+    <option value="name"         {% if current_sort=='name' %}selected{% endif %}>{{ t.sort_by_name }}</option>
+    <option value="lastfm"       {% if current_sort=='lastfm' %}selected{% endif %}>{{ t.sort_lastfm }}</option>
+    <option value="mixes"        {% if current_sort=='mixes' %}selected{% endif %}>{{ t.sort_by_mixes }}</option>
+    <option value="implications" {% if current_sort=='implications' %}selected{% endif %}>{{ t.sort_by_genres }}</option>
   </select>
-  <button type="submit">Застосувати</button>
+  <button type="submit">{{ t.sort_apply }}</button>
 </form>
 
 <table style="width:100%; border-collapse:collapse; font-size:14px;">
   <thead>
     <tr style="border-bottom:1px solid var(--border); vertical-align:top; color:var(--text-muted); font-size:12px;">
-      <td style="padding:8px;">Артист</td>
-      <td style="padding:8px;">Жанри (імплікації)</td>
+      <td style="padding:8px;">{{ t.col_artist }}</td>
+      <td style="padding:8px;">{{ t.col_genres }}</td>
       <td style="padding:8px; text-align:right;">Last.fm</td>
     </tr>
   </thead>
@@ -40,7 +37,7 @@
       <td style="padding:8px; white-space:nowrap; vertical-align:top;">
         <a href="/tag/artist: {{ a.name }}">{{ a.name }}</a>
         <span style="color:var(--text-muted); font-size:11px; margin-left:6px;">
-          {% if a.mix_count %}{{ a.mix_count }} міксів{% endif %}
+          {% if a.mix_count %}{{ a.mix_count }} {{ t.artist_mixes_count }}{% endif %}
         </span>
       </td>
       <td style="padding:8px; max-width:500px; vertical-align:top;" id="tags-{{ loop.index }}">
@@ -89,7 +86,7 @@ document.querySelectorAll(".fetchTagsBtn").forEach(btn => {
     const tagsEl = document.getElementById(`tags-${index}`);
 
     btn.disabled = true;
-    statusEl.textContent = "завантаження...";
+    statusEl.textContent = "{{ t.loading }}";
 
     try {
       const resp = await fetch(`/artists/fetch-tags/${encodeURIComponent(artist)}`, {
@@ -99,7 +96,6 @@ document.querySelectorAll(".fetchTagsBtn").forEach(btn => {
 
       if (data.ok) {
         statusEl.textContent = "✅";
-        // оновлюємо відображення тегів без перезавантаження
         tagsEl.innerHTML = data.tags.map(tag =>
           `<span style="display:inline-flex; align-items:center; gap:4px; margin:2px;">
             <a href="/tag/${encodeURIComponent(tag)}" class="tag" style="font-size:12px; text-decoration:none;">${tag}</a>
@@ -115,13 +111,13 @@ document.querySelectorAll(".fetchTagsBtn").forEach(btn => {
         btn.disabled = false;
       }
     } catch (err) {
-      statusEl.textContent = "❌ помилка";
+      statusEl.textContent = "❌ {{ t.error }}";
       btn.disabled = false;
     }
   });
 });
 
-  document.addEventListener("click", async (e) => {
+document.addEventListener("click", async (e) => {
   const btn = e.target.closest(".deleteImplicationBtn");
   if (!btn) return;
 
@@ -143,9 +139,8 @@ document.querySelectorAll(".fetchTagsBtn").forEach(btn => {
       span.remove();
     }
   } catch (err) {
-    console.error("Помилка видалення імплікації", err);
+    console.error("{{ t.error }}", err);
   }
 });
-
 </script>
 {% endblock %}

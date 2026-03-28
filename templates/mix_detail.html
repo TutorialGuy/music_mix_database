@@ -1,305 +1,277 @@
 {% extends "base.html" %}
 
-{% block title %}Мікс: {{ mix_title }}{% endblock %}
+{% block title %}{{ t.mix_prefix }} {{ mix_title }}{% endblock %}
 
 {% block content %}
 
 <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
-  <h2 id="mixTitleDisplay" style="margin:0;">Мікс: <span id="mixTitleText">{{ mix_title }}</span></h2>
-  <button type="button" id="editTitleBtn" style="font-size:12px; padding:3px 8px;">✏️ змінити</button>
+  <h2 id="mixTitleDisplay" style="margin:0;">{{ t.mix_prefix }} <span id="mixTitleText">{{ mix_title }}</span></h2>
+  <button type="button" id="editTitleBtn" style="font-size:12px; padding:3px 8px;">{{ t.btn_edit_title }}</button>
 </div>
 
 <div id="titleEditForm" style="display:none; margin-bottom:12px;">
   <div style="display:flex; gap:8px; align-items:center;">
     <input id="titleInput" value="{{ mix_title }}"
            style="width:420px; font-size:16px;">
-    <button type="button" id="saveTitleBtn">Зберегти</button>
-    <button type="button" id="cancelTitleBtn">Скасувати</button>
+    <button type="button" id="saveTitleBtn">{{ t.btn_save }}</button>
+    <button type="button" id="cancelTitleBtn">{{ t.btn_cancel }}</button>
   </div>
   <div id="titleError" style="color:var(--danger); font-size:13px; margin-top:4px; display:none;"></div>
 </div>
 
-<!-- Навігація зверху -->
 <p style="margin-top:6px;">
-  <a href="/" style="margin-right:12px;">🏠 На головну</a>
-  <a href="/mixes">⬅️ Назад до списку міксів</a>
+  <a href="/" style="margin-right:12px;">🏠 {{ t.nav_home }}</a>
+  <a href="/mixes">⬅️ {{ t.nav_back_mixes }}</a>
 </p>
 
-<!-- Двоколонковий блок -->
 <div class="mix-container">
 
-    <!-- Ліва колонка: трекліст -->
     <div class="mix-left">
 
         <div class="tracklist-toolbar">
           <div class="tracklist-toolbar-inner">
-            <button type="button" id="editTracklistBtn">Редагувати трекліст</button>
+            <button type="button" id="editTracklistBtn">{{ t.btn_edit_tracklist }}</button>
 
             <div id="editBar" class="tracklist-editbar" style="display:none;">
-              <button type="button" id="deleteSelectedBtn" style="display:none;">Видалити обране</button>
-              <button type="button" id="clearTracklistBtn">🗑️ Очистити трекліст</button>
-              <span class="tracklist-hint">Перетягуй треки мишкою, щоб змінити порядок</span>
+              <button type="button" id="deleteSelectedBtn" style="display:none;">{{ t.btn_delete_selected }}</button>
+              <button type="button" id="clearTracklistBtn">{{ t.btn_clear_tracklist }}</button>
+              <span class="tracklist-hint">{{ t.tracklist_drag_hint }}</span>
             </div>
           </div>
         </div>
 
         <p style="margin: 8px 0 14px 0;">
-          <a href="/mix/{{ mix_id }}/export-tracklist">⬇️ Експорт трекліста (.txt)</a>
+          <a href="/mix/{{ mix_id }}/export-tracklist">{{ t.export_tracklist }}</a>
         </p>
 
-        <h3>Трекліст</h3>
+        <h3>{{ t.tracklist_title }}</h3>
 
         {% if not tracks %}
-            <p>Поки що немає треків.</p>
+            <p>{{ t.no_tracks }}</p>
         {% else %}
             <ol id="trackList" data-mix-id="{{ mix_id }}" data-youtube="{{ youtube or '' }}">
-              {% for t in tracks %}
-                <li data-track-id="{{ t.mix_track_id }}" style="margin-bottom:10px;">
-  <div class="viewRow" style="display:flex; gap:10px; align-items:center;">
-    <input class="selectBox" type="checkbox" style="display:none;">
-    <span class="dragHandle" draggable="true" style="display:none; cursor:grab;">☰</span>
+              {% for track in tracks %}
+                <li data-track-id="{{ track.mix_track_id }}" style="margin-bottom:10px;">
+                  <div class="viewRow" style="display:flex; gap:10px; align-items:center;">
+                    <input class="selectBox" type="checkbox" style="display:none;">
+                    <span class="dragHandle" draggable="true" style="display:none; cursor:grab;">☰</span>
 
-    <div class="trackText" style="flex:1;">
-      {% if t.time_value %}
-          {% if youtube %}
-            <a href="{{ youtube }}&t={{ t.time_value | time_to_seconds }}" target="_blank">
-              <b>[{{ t.time_value }}]</b>
-            </a>
-          {% else %}
-            <b>[{{ t.time_value }}]</b>
-          {% endif %}
-        {% endif %}
-      {% if t.artist %}<b>{{ t.artist }} — {{ t.title }}</b>{% else %}<b>{{ t.title }}</b>{% endif %}
-      {% if t.sc_track %} ( <a href="{{ t.sc_track }}" target="_blank">SoundCloud</a> ){% endif %}
-    </div>
+                    <div class="trackText" style="flex:1;">
+                      {% if track.time_value %}
+                          {% if youtube %}
+                            <a href="{{ youtube }}&t={{ track.time_value | time_to_seconds }}" target="_blank">
+                              <b>[{{ track.time_value }}]</b>
+                            </a>
+                          {% else %}
+                            <b>[{{ track.time_value }}]</b>
+                          {% endif %}
+                        {% endif %}
+                      {% if track.artist %}<b>{{ track.artist }} — {{ track.title }}</b>{% else %}<b>{{ track.title }}</b>{% endif %}
+                      {% if track.sc_track %} ( <a href="{{ track.sc_track }}" target="_blank">SoundCloud</a> ){% endif %}
+                    </div>
 
-    <button type="button" class="toggleInlineEdit" style="display:none;">✏️</button>
-    <button type="button" class="trackSearchBtn">🔍</button>
-  </div>
+                    <button type="button" class="toggleInlineEdit" style="display:none;">✏️</button>
+                    <button type="button" class="trackSearchBtn">🔍</button>
+                  </div>
 
-  <div class="editRow" style="display:none; margin-top:6px;">
-    <form class="inlineEditForm" data-url="/mix/{{ mix_id }}/update-track/{{ t.mix_track_id }}">
-      <input name="time" value="{{ t.time_value or '' }}" placeholder="00:00:00" style="width:120px;">
-      <input name="artist" value="{{ t.artist or '' }}" placeholder="Артист" style="width:220px;">
-      <input name="title" value="{{ t.title or '' }}" placeholder="Назва треку *" style="width:260px;">
-      <input name="soundcloud" value="{{ t.sc_track or '' }}" placeholder="SoundCloud URL" style="width:260px;">
-      <button type="submit">Зберегти</button>
-    </form>
-  </div>
-                    <div class="searchRow" style="display:none; margin-top:6px;">
-    <div style="background:#2b2d31; border:1px solid #3c3f45; border-radius:8px; padding:10px 14px;">
-      <div style="font-size:11px; color:#a1a1a1; margin-bottom:8px;">Пошук на сервісах:</div>
-      <div class="searchLinks" style="display:flex; flex-direction:column; gap:6px;"></div>
-    </div>
-  </div>
-</li>
+                  <div class="editRow" style="display:none; margin-top:6px;">
+                    <form class="inlineEditForm" data-url="/mix/{{ mix_id }}/update-track/{{ track.mix_track_id }}">
+                      <input name="time" value="{{ track.time_value or '' }}" placeholder="{{ t.track_placeholder_time }}" style="width:120px;">
+                      <input name="artist" value="{{ track.artist or '' }}" placeholder="{{ t.track_placeholder_artist }}" style="width:220px;">
+                      <input name="title" value="{{ track.title or '' }}" placeholder="{{ t.track_placeholder_title }}" style="width:260px;">
+                      <input name="soundcloud" value="{{ track.sc_track or '' }}" placeholder="{{ t.track_placeholder_sc }}" style="width:260px;">
+                      <button type="submit">{{ t.btn_save }}</button>
+                    </form>
+                  </div>
+
+                  <div class="searchRow" style="display:none; margin-top:6px;">
+                    <div style="background:#2b2d31; border:1px solid #3c3f45; border-radius:8px; padding:10px 14px;">
+                      <div style="font-size:11px; color:#a1a1a1; margin-bottom:8px;">{{ t.search_on_services }}</div>
+                      <div class="searchLinks" style="display:flex; flex-direction:column; gap:6px;"></div>
+                    </div>
+                  </div>
+                </li>
               {% endfor %}
             </ol>
         {% endif %}
 
-      <h3>Теги</h3>
+      <h3>{{ t.tags_title }}</h3>
 
-<div class="tagsBlock" id="tagsBlock">
+      <div class="tagsBlock" id="tagsBlock">
 
-  <!-- Режим перегляду -->
-  <div id="tagsViewMode">
-  {% if tags %}
-  <div class="tagsDisplayBox" id="tagsDisplayBox">
-   {% for tag, cnt in tags %}
-<a href="/tag/{{ tag | urlencode }}"
-         class="tag tagDisplay {% if tag.startswith('artist: ') %}tag-artist{% elif tag == 'dead source' %}tag-dead-source{% elif tag == 'empty tracklist' %}tag-empty-tracklist{% endif %}"
-         style="text-decoration:none;">
-        {{ tag }}
-        <span class="tag-count">{{ cnt }}</span>
-      </a>
-    {% endfor %}
-  </div>
-  {% else %}
-  <div id="tagsDisplayBox"></div>
-  {% endif %}
-  <button type="button" id="editTagsBtn" style="margin-top:8px;">✏️ Редагувати теги</button>
-</div>
-
-  <!-- Режим редагування -->
-  <div id="tagsEditMode" style="display:none;">
-    <form id="tagsForm" action="/mix/{{ mix_id }}/update-tags" method="post">
-      <div class="tagsEditBox" id="tagsEditBox">
-        {% for tag, cnt in tags %}
-          <span class="tag tagEdit {% if tag.startswith('artist: ') %}tag-artist{% endif %}"
-                data-tag="{{ tag }}">
-            {{ tag }}
-            <button type="button" class="tagRemoveBtn" data-tag="{{ tag }}">×</button>
-          </span>
-        {% endfor %}
-        <div class="tagAutocompleteWrap tagInputWrap">
-          <input id="mixTagsInput"
-                 type="text"
-                 placeholder="додати тег..."
-                 class="tagInlineInput"
-                 autocomplete="off">
-          <div id="mixTagsSuggest" class="tagSuggestBox"></div>
+        <div id="tagsViewMode">
+          {% if tags %}
+          <div class="tagsDisplayBox" id="tagsDisplayBox">
+            {% for tag, cnt in tags %}
+              <a href="/tag/{{ tag | urlencode }}"
+                 class="tag tagDisplay {% if tag.startswith('artist: ') %}tag-artist{% elif tag == 'dead source' %}tag-dead-source{% elif tag == 'empty tracklist' %}tag-empty-tracklist{% endif %}"
+                 style="text-decoration:none;">
+                {{ tag }}
+                <span class="tag-count">{{ cnt }}</span>
+              </a>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div id="tagsDisplayBox"></div>
+          {% endif %}
+          <button type="button" id="editTagsBtn" style="margin-top:8px;">{{ t.btn_edit_tags }}</button>
         </div>
-      </div>
-      <input type="hidden" name="tags" id="tagsHidden" value="{{ tags_input or '' }}">
-      <div style="margin-top:8px; display:flex; gap:8px;">
-        <button type="submit" class="tagsSaveBtn">Зберегти</button>
-        <button type="button" id="cancelTagsBtn">Скасувати</button>
-      </div>
-    </form>
-  </div>
 
-</div>
+        <div id="tagsEditMode" style="display:none;">
+          <form id="tagsForm" action="/mix/{{ mix_id }}/update-tags" method="post">
+            <div class="tagsEditBox" id="tagsEditBox">
+              {% for tag, cnt in tags %}
+                <span class="tag tagEdit {% if tag.startswith('artist: ') %}tag-artist{% endif %}"
+                      data-tag="{{ tag }}">
+                  {{ tag }}
+                  <button type="button" class="tagRemoveBtn" data-tag="{{ tag }}">×</button>
+                </span>
+              {% endfor %}
+              <div class="tagAutocompleteWrap tagInputWrap">
+                <input id="mixTagsInput"
+                       type="text"
+                       placeholder="{{ t.tag_input_placeholder }}"
+                       class="tagInlineInput"
+                       autocomplete="off">
+                <div id="mixTagsSuggest" class="tagSuggestBox"></div>
+              </div>
+            </div>
+            <input type="hidden" name="tags" id="tagsHidden" value="{{ tags_input or '' }}">
+            <div style="margin-top:8px; display:flex; gap:8px;">
+              <button type="submit" class="tagsSaveBtn">{{ t.btn_save }}</button>
+              <button type="button" id="cancelTagsBtn">{{ t.btn_cancel }}</button>
+            </div>
+          </form>
+        </div>
 
-<script id="mixAllTagsData" type="application/json">{{ all_tags|tojson }}</script>
+      </div>
+
+      <script id="mixAllTagsData" type="application/json">{{ all_tags|tojson }}</script>
 
     </div>
 
-    <!-- Права колонка: обкладинка + посилання -->
     <div class="mix-right">
 
         {% if cover %}
             <div style="margin-bottom:10px;">
                 <img src="/{{ cover }}" alt="cover"
-    style="width:400px; height:auto; object-fit:contain; border:1px solid #ccc; border-radius:10px;">
+                     style="width:400px; height:auto; object-fit:contain; border:1px solid #ccc; border-radius:10px;">
             </div>
         {% endif %}
 
-        <h3 style="margin-top:0;">Обкладинка</h3>
+        <h3 style="margin-top:0;">{{ t.cover_title }}</h3>
 
         {% if cover_error_msg %}
             <p style="color:red;"><b>{{ cover_error_msg }}</b></p>
         {% endif %}
 
         <form method="post" action="/mix/{{ mix_id }}/update-cover" enctype="multipart/form-data" id="coverForm">
-
           <div id="dropzone" class="dropzone">
-            <div class="dropzone-title">Перетягни обкладинку сюди</div>
-            <div class="dropzone-hint">або натисни, щоб вибрати файл</div>
-
+            <div class="dropzone-title">{{ t.dropzone_title }}</div>
+            <div class="dropzone-hint">{{ t.dropzone_hint }}</div>
             <input type="file" name="cover" accept="image/*" id="coverInput" class="dropzone-input">
           </div>
-
-          <small class="help">
-            Формати: JPG/JPEG, PNG, BMP, WEBP, GIF • Макс: 3MB • До 3000×3000
-          </small>
+          <small class="help">{{ t.cover_formats }}</small>
         </form>
 
         <hr style="margin:15px 0;">
 
-        <h3 style="margin-top:0;">Посилання</h3>
+        <h3 style="margin-top:0;">{{ t.links_title }}</h3>
 
-<div class="linksBox">
-  <div class="linkRow">
-  <div class="linkLabel">
-    <img src="{{ url_for('static', filename='icons/youtube.svg') }}"
-         class="link-icon" alt="YouTube">
-    YouTube
-  </div>
-  <div class="linkValue">
-    {% if youtube %}
-      <a href="{{ youtube }}" target="_blank">{{ mix_title }}</a>
-    {% else %}
-      <span class="muted">(немає)</span>
-    {% endif %}
-  </div>
-</div>
+        <div class="linksBox">
+          <div class="linkRow">
+            <div class="linkLabel">
+              <img src="{{ url_for('static', filename='icons/youtube.svg') }}" class="link-icon" alt="YouTube">
+              YouTube
+            </div>
+            <div class="linkValue">
+              {% if youtube %}
+                <a href="{{ youtube }}" target="_blank">{{ mix_title }}</a>
+              {% else %}
+                <span class="muted">{{ t.link_none }}</span>
+              {% endif %}
+            </div>
+          </div>
 
-<div class="linkRow">
-  <div class="linkLabel">
-    <img src="{{ url_for('static', filename='icons/soundcloud.svg') }}"
-         class="link-icon" alt="SoundCloud">
-    SoundCloud
-  </div>
-  <div class="linkValue">
-    {% if sc_mix %}
-      <a href="{{ sc_mix }}" target="_blank">{{ mix_title }}</a>
-    {% else %}
-      <span class="muted">(немає)</span>
-    {% endif %}
-  </div>
-</div>
+          <div class="linkRow">
+            <div class="linkLabel">
+              <img src="{{ url_for('static', filename='icons/soundcloud.svg') }}" class="link-icon" alt="SoundCloud">
+              SoundCloud
+            </div>
+            <div class="linkValue">
+              {% if sc_mix %}
+                <a href="{{ sc_mix }}" target="_blank">{{ mix_title }}</a>
+              {% else %}
+                <span class="muted">{{ t.link_none }}</span>
+              {% endif %}
+            </div>
+          </div>
 
-<div class="linkRow">
-  <div class="linkLabel">
-    <img src="{{ url_for('static', filename='icons/spotify.svg') }}"
-         class="link-icon" alt="Spotify">
-    Spotify
-  </div>
-  <div class="linkValue">
-    {% if spotify %}
-      <a href="{{ spotify }}" target="_blank">{{ mix_title }}</a>
-    {% else %}
-      <span class="muted">(немає)</span>
-    {% endif %}
-  </div>
-</div>
-</div>
+          <div class="linkRow">
+            <div class="linkLabel">
+              <img src="{{ url_for('static', filename='icons/spotify.svg') }}" class="link-icon" alt="Spotify">
+              Spotify
+            </div>
+            <div class="linkValue">
+              {% if spotify %}
+                <a href="{{ spotify }}" target="_blank">{{ mix_title }}</a>
+              {% else %}
+                <span class="muted">{{ t.link_none }}</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
 
-<details style="margin-top:10px;">
-  <summary style="cursor:pointer;">✏️ редагувати посилання</summary>
+        <details style="margin-top:10px;">
+          <summary style="cursor:pointer;">{{ t.btn_edit_links }}</summary>
+          <form method="post" action="/mix/{{ mix_id }}/update-links" style="margin-top:8px;">
+            <p style="margin:6px 0;">
+              YouTube:<br>
+              <input name="youtube" value="{{ youtube or '' }}" style="width:100%;">
+            </p>
+            <p style="margin:6px 0;">
+              SoundCloud:<br>
+              <input name="soundcloud" value="{{ sc_mix or '' }}" style="width:100%;">
+            </p>
+            <p style="margin:6px 0;">
+              Spotify:<br>
+              <input name="spotify" value="{{ spotify or '' }}" style="width:100%;">
+            </p>
+            <button type="submit">{{ t.btn_save }}</button>
+          </form>
+        </details>
 
-  <form method="post" action="/mix/{{ mix_id }}/update-links" style="margin-top:8px;">
-    <p style="margin:6px 0;">
-      YouTube:<br>
-      <input name="youtube" value="{{ youtube or '' }}" style="width:100%;">
-    </p>
+        <div class="sectionSpacer"></div>
 
-    <p style="margin:6px 0;">
-      SoundCloud:<br>
-      <input name="soundcloud" value="{{ sc_mix or '' }}" style="width:100%;">
-    </p>
+        <h3>{{ t.duration_title }}</h3>
 
-    <p style="margin:6px 0;">
-      Spotify:<br>
-      <input name="spotify" value="{{ spotify or '' }}" style="width:100%;">
-    </p>
+        {% if duration_sec %}
+          <div style="color:#bfbfbf; margin:6px 0 10px 0;">
+            {{ t.duration_current }} <b>{{ format_seconds_to_hms(duration_sec) }}</b>
+          </div>
+        {% endif %}
 
-    <button type="submit">Зберегти</button>
-  </form>
-</details>
-
-<div class="sectionSpacer"></div>
-
-        <h3>Тривалість</h3>
-
-            {% if duration_sec %}
-              <div style="color:#bfbfbf; margin:6px 0 10px 0;">
-                Поточна: <b>{{ format_seconds_to_hms(duration_sec) }}</b>
-              </div>
-            {% endif %}
-
-            <form method="post" action="/mix/{{ mix_id }}/update-duration" style="display:flex; gap:10px; align-items:center;">
-              <input name="duration" value="" placeholder="01:23:45" style="width:140px;">
-              <button type="submit">Зберегти</button>
-            </form>
-            <small style="color:gray;">Формат: MM:SS або HH:MM:SS</small>
+        <form method="post" action="/mix/{{ mix_id }}/update-duration" style="display:flex; gap:10px; align-items:center;">
+          <input name="duration" value="" placeholder="01:23:45" style="width:140px;">
+          <button type="submit">{{ t.btn_save }}</button>
+        </form>
+        <small style="color:gray;">{{ t.duration_format }}</small>
     </div>
 </div>
 
-<!-- Нижній блок: імпорт + додавання -->
 <div class="mix-bottom">
-
-    <h3>Імпорт трекліста</h3>
+    <h3>{{ t.import_title }}</h3>
     <form method="post" action="/mix/{{ mix_id }}/import-tracks">
       <textarea name="bulk"
-        placeholder="Встав сюди трекліст (кожен трек з нового рядка)
-
-Підтримуються формати:
-• 00:04:32 - Title
-• 00:04:32 Artist - Track
-• 04:32 Artist - Track
-• Artist - Track
-• Track"
+        placeholder="{{ t.import_placeholder }}"
         style="width:700px;height:220px;padding:10px;font-family:monospace;"></textarea><br>
-      <button type="submit">Імпортувати</button>
+      <button type="submit">{{ t.btn_import }}</button>
     </form>
-
 </div>
 
-<!-- Навігація знизу -->
 <p style="margin-top:20px;">
-  <a href="/" style="margin-right:12px;">🏠 На головну</a>
-  <a href="/mixes">⬅️ Назад до списку міксів</a>
+  <a href="/" style="margin-right:12px;">🏠 {{ t.nav_home }}</a>
+  <a href="/mixes">⬅️ {{ t.nav_back_mixes }}</a>
 </p>
 
 {% endblock %}
