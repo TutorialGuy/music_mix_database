@@ -11,6 +11,7 @@ def get_connection():
     conn.execute("PRAGMA synchronous = NORMAL;")
     return conn
 
+
 def init_db():
     with get_connection() as conn:
         cur = conn.cursor()
@@ -98,13 +99,7 @@ def init_db():
         except sqlite3.OperationalError:
             pass
 
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_mix_tracks_mix_id ON mix_tracks(mix_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_mix_tracks_pos ON mix_tracks(mix_id, pos)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_mix_tags_mix_id ON mix_tags(mix_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_mix_tags_tag_id ON mix_tags(tag_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_tag_implications_tag ON tag_implications(tag_name)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_mixes_added ON mixes(added_at)")
+        
 
         conn.commit()
 
