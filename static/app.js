@@ -457,6 +457,48 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const mixId = trackList.dataset.mixId;
 
+  // ----- автоскрол під час drag -----
+  let autoScrollInterval = null;
+
+  document.addEventListener("dragover", (e) => {
+    const threshold = 80; // px від краю вікна
+    const speed = 10;     // px за крок
+
+    if (autoScrollInterval) {
+      clearInterval(autoScrollInterval);
+      autoScrollInterval = null;
+    }
+
+    const y = e.clientY;
+    const h = window.innerHeight;
+
+    if (y < threshold) {
+      // курсор біля верхнього краю — скролимо вгору
+      autoScrollInterval = setInterval(() => {
+        window.scrollBy(0, -speed);
+      }, 16);
+    } else if (y > h - threshold) {
+      // курсор біля нижнього краю — скролимо вниз
+      autoScrollInterval = setInterval(() => {
+        window.scrollBy(0, speed);
+      }, 16);
+    }
+  });
+
+  document.addEventListener("dragend", () => {
+    if (autoScrollInterval) {
+      clearInterval(autoScrollInterval);
+      autoScrollInterval = null;
+    }
+  });
+
+  document.addEventListener("drop", () => {
+    if (autoScrollInterval) {
+      clearInterval(autoScrollInterval);
+      autoScrollInterval = null;
+    }
+  });
+
   // ----- helpers -----
   function isEditing() {
     return trackList.dataset.editing === "1";
